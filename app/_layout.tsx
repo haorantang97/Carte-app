@@ -15,6 +15,7 @@ import { queryClient, asyncStoragePersister } from '@/lib/queryClient';
 import { ensureSession, ensureProfile } from '@/lib/auth';
 import i18n, { initI18n } from '@/lib/i18n';
 import { SplashScreen } from '@/components/splash/SplashScreen';
+import { useRealtimeOrderStatus } from '@/hooks/realtime/useRealtimeOrderStatus';
 
 ExpoSplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -23,6 +24,11 @@ persistQueryClient({
   persister: asyncStoragePersister,
   maxAge: 1000 * 60 * 60 * 24,
 });
+
+function RealtimeBridge() {
+  useRealtimeOrderStatus();
+  return null;
+}
 
 export default function RootLayout() {
   const [bootDone, setBootDone] = useState(false);
@@ -65,6 +71,7 @@ export default function RootLayout() {
                 <Stack.Screen name="dish/[id]" />
                 <Stack.Screen name="profile/edit" />
               </Stack>
+              <RealtimeBridge />
               {showSplash && <SplashScreen onDone={() => setSplashDone(true)} />}
               <StatusBar style="dark" />
               <Toast />

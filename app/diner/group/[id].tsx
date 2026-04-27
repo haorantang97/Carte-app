@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { DishCardCompact } from '@/components/diner/DishCardCompact';
 import { CartFAB } from '@/components/diner/CartFAB';
 import { CartSheet } from '@/components/diner/CartSheet';
+import { WishlistSection } from '@/components/wishlist/WishlistSection';
 import { useDinerMenu } from '@/hooks/diner/useDinerMenu';
 import { useCart } from '@/stores/cartStore';
 import { showToast } from '@/components/ui/Toast';
@@ -128,7 +129,7 @@ export default function DinerGroupDetails() {
         })}
       </ScrollView>
 
-      {/* Dishes */}
+      {/* Dishes + Wishlist */}
       <ScrollView contentContainerStyle={tw`px-4 pb-32 gap-2`}>
         {visibleDishes.length === 0 ? (
           <EmptyState title={t('discover.noPublicDishesYet')} />
@@ -137,6 +138,9 @@ export default function DinerGroupDetails() {
             <DishCardCompact key={d.id} dish={d} onAdd={() => onAdd(d.id)} />
           ))
         )}
+        <View style={tw`mt-6 pt-4 border-t border-gray-200`}>
+          <WishlistSection groupId={groupId} />
+        </View>
       </ScrollView>
 
       <CartFAB count={count} onPress={() => setCartOpen(true)} />

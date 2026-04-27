@@ -2,11 +2,12 @@ import { type InfiniteData, useMutation, useQueryClient } from '@tanstack/react-
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
 import { discoverFeedKey, type FeedPage } from '@/hooks/feed/useDiscoverFeed';
+import { dishDetailKey, type DishDetail } from '@/hooks/dish/useDishDetail';
 
 /**
  * Toggle a like with optimistic update applied to:
- *  - the discover-feed cache (so the heart fills immediately)
- *  - the dish-detail cache (Phase G)
+ *  - the discover-feed cache (so the heart fills immediately on the masonry)
+ *  - the dish-detail cache (so the header heart updates without round-trip)
  */
 export function useToggleDishLike() {
   const { user } = useSession();
@@ -31,7 +32,11 @@ export function useToggleDishLike() {
     },
     onMutate: async ({ dishId, liked }) => {
       await qc.cancelQueries({ queryKey: discoverFeedKey });
-      const prev = qc.getQueryData<InfiniteData<FeedPage>>(discoverFeedKey);
+      await qc.cancelQueries({ queryKey: dishDetailKey(dishId) });
+
+      const prevFeed = qc.getQueryData<InfiniteData<FeedPage>>(discoverFeedKey);
+      const prevDetail = qc.getQueryData<DishDetail>(dishDetailKey(dishId));
+
       qc.setQueryData<InfiniteData<FeedPage> | undefined>(discoverFeedKey, (cur) => {
         if (!cur) return cur;
         return {
@@ -50,10 +55,22 @@ export function useToggleDishLike() {
           })),
         };
       });
-      return { prev };
+
+      qc.setQueryData<DishDetail | undefined>(dishDetailKey(dishId), (cur) =>
+        cur
+          ? {
+              ...cur,
+              liked_by_me: !liked,
+              likes_count: Math.max(0, cur.likes_count + (liked ? -1 : 1)),
+            }
+          : cur,
+      );
+
+      return { prevFeed, prevDetail, dishId };
     },
     onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(discoverFeedKey, ctx.prev);
+      if (ctx?.prevFeed) qc.setQueryData(discoverFeedKey, ctx.prevFeed);
+      if (ctx && ctx.prevDetail) qc.setQueryData(dishDetailKey(ctx.dishId), ctx.prevDetail);
     },
   });
 }

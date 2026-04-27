@@ -46,7 +46,8 @@
           "photosPermission": "Carte needs access to your photos to set dish images and your profile avatar.",
           "cameraPermission": "Carte uses your camera to capture dish photos."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

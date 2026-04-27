@@ -1,0 +1,131 @@
+{
+  "common": {
+    "loading": "加载中...",
+    "saving": "保存中...",
+    "save": "保存",
+    "cancel": "取消",
+    "create": "创建",
+    "update": "更新",
+    "delete": "删除",
+    "edit": "编辑",
+    "back": "返回",
+    "confirm": "确认",
+    "logout": "退出登录",
+    "join": "加入"
+  },
+  "splash": {
+    "tagline": "Carte"
+  },
+  "tabs": {
+    "kitchen": "厨房",
+    "discover": "发现",
+    "profile": "我的"
+  },
+  "home": {
+    "welcome": "欢迎来到 Carte",
+    "selectMode": "选择您的模式",
+    "enterAsChef": "我是厨师",
+    "enterAsDiner": "我是食客",
+    "chefDescription": "创建和管理菜单",
+    "dinerDescription": "浏览菜单并下单"
+  },
+  "discover": {
+    "title": "发现",
+    "subtitle": "探索厨师的美食",
+    "exploreDishes": "探索美食...",
+    "noPublicDishesYet": "还没有公开的菜品",
+    "beFirstToShare": "成为第一个分享的人吧!"
+  },
+  "profile": {
+    "title": "我的",
+    "editProfile": "编辑资料",
+    "tapToChangeAvatar": "点击更换头像",
+    "username": "用户名",
+    "cropAvatar": "裁剪头像",
+    "pinchToZoom": "双指缩放,拖动移动"
+  },
+  "chef": {
+    "myMenuGroups": "我的 Carte",
+    "createMenuGroup": "创建新 Carte",
+    "editMenuGroup": "编辑 Carte",
+    "groupName": "Carte 名称",
+    "menuNamePlaceholder": "例如:家人周末菜单",
+    "accessCode": "Carte Code",
+    "groupPassword": "PIN 码",
+    "carteCodeCopied": "Carte Code 已复制!",
+    "carteCodeCopiedMessage": "Carte Code 已复制到剪贴板",
+    "private": "私密",
+    "public": "公开",
+    "setPasswordForPrivateCarte": "为私密 Carte 设置 PIN 码",
+    "enterPasswordToMakePrivate": "输入 4–8 位 PIN 码以使此 Carte 变为私密",
+    "enterPasswordForPrivate": "输入 PIN",
+    "setPassword": "设置 PIN",
+    "noCategoriesYet": "还没有分类",
+    "categories": "分类",
+    "categoryName": "分类名称",
+    "addCategory": "添加分类",
+    "editCategory": "编辑分类",
+    "dishes": "菜品",
+    "addDish": "添加菜品",
+    "editDish": "编辑菜品",
+    "dishName": "菜品名称",
+    "description": "描述",
+    "dishDescriptionPlaceholder": "详细描述菜品的特色和做法...",
+    "price": "价格",
+    "imageUrl": "图片",
+    "recipe": "食谱",
+    "recipeIsPrivate": "食谱私密(仅我可见)",
+    "ingredients": "配料",
+    "clickToAddIngredient": "点击 + 添加配料,× 删除",
+    "continueAdding": "继续添加...",
+    "deleteMenuGroup": "删除 Carte",
+    "deleteMenuGroupConfirm": "确定删除「{{name}}」吗?这将同时删除所有分类和菜品。",
+    "deleteDish": "删除菜品",
+    "deleteDishConfirm": "确定删除「{{name}}」吗?此操作不可撤销。",
+    "activeOrders": "活跃订单",
+    "noActiveOrders": "没有活跃订单",
+    "shoppingList": "购物清单",
+    "wishlist": "愿望清单",
+    "editMode": "编辑"
+  },
+  "diner": {
+    "myMenus": "我的菜单",
+    "joinMenu": "加入 Carte",
+    "joinKitchen": "加入厨房",
+    "enterChefCode": "输入 Carte Code",
+    "carteCodeLabel": "Carte Code",
+    "enterPassword": "输入 PIN",
+    "viewMenu": "查看菜单",
+    "addToCart": "加入购物车",
+    "addedToCart": "已加入购物车",
+    "placeOrder": "下单",
+    "addToWishlist": "添加到愿望清单",
+    "menuNotFound": "菜单未找到",
+    "publicCarteNoPin": "这是公开 Carte,无需 PIN 码。",
+    "carteCodeNotFound": "Carte Code 不存在",
+    "wrongPin": "PIN 码错误",
+    "joinedKitchen": "已加入!"
+  },
+  "dish": {
+    "comments": "评论",
+    "noComments": "暂无评论,快来抢沙发吧!",
+    "writeComment": "写评论...",
+    "deleteComment": "删除评论?",
+    "deleted": "已删除"
+  },
+  "orders": {
+    "pending": "待处理",
+    "preparing": "准备中",
+    "ready": "已就绪",
+    "completed": "已完成",
+    "cancelled": "已取消",
+    "newOrderReceived": "收到新订单",
+    "orderStatusUpdated": "订单状态已更新为 {{status}}"
+  },
+  "errors": {
+    "generic": "出错了",
+    "imageTooLarge": "图片必须小于 5 MB",
+    "network": "网络错误,请重试",
+    "missingFields": "请填写必填项"
+  }
+}

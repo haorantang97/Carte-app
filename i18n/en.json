@@ -1,0 +1,131 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "create": "Create",
+    "update": "Update",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "confirm": "Confirm",
+    "logout": "Log out",
+    "join": "Join"
+  },
+  "splash": {
+    "tagline": "Carte"
+  },
+  "tabs": {
+    "kitchen": "Kitchen",
+    "discover": "Discover",
+    "profile": "Profile"
+  },
+  "home": {
+    "welcome": "Welcome to Carte",
+    "selectMode": "Select Your Mode",
+    "enterAsChef": "I am Chef",
+    "enterAsDiner": "I am Diner",
+    "chefDescription": "Create and manage menus",
+    "dinerDescription": "Browse menus and place orders"
+  },
+  "discover": {
+    "title": "Discover",
+    "subtitle": "Explore dishes from chefs",
+    "exploreDishes": "Explore dishes...",
+    "noPublicDishesYet": "No public dishes yet",
+    "beFirstToShare": "Be the first to share!"
+  },
+  "profile": {
+    "title": "Profile",
+    "editProfile": "Edit Profile",
+    "tapToChangeAvatar": "Tap to change avatar",
+    "username": "Username",
+    "cropAvatar": "Crop Avatar",
+    "pinchToZoom": "Pinch to zoom, drag to move"
+  },
+  "chef": {
+    "myMenuGroups": "My Carte",
+    "createMenuGroup": "Create New Carte",
+    "editMenuGroup": "Edit Carte",
+    "groupName": "Carte Name",
+    "menuNamePlaceholder": "e.g., Family Sunday Menu",
+    "accessCode": "Carte Code",
+    "groupPassword": "PIN",
+    "carteCodeCopied": "Carte Code copied!",
+    "carteCodeCopiedMessage": "Carte Code copied to clipboard",
+    "private": "Private",
+    "public": "Public",
+    "setPasswordForPrivateCarte": "Set PIN for Private Carte",
+    "enterPasswordToMakePrivate": "Enter a 4–8 digit PIN to make this carte private",
+    "enterPasswordForPrivate": "Enter PIN",
+    "setPassword": "Set PIN",
+    "noCategoriesYet": "No categories yet",
+    "categories": "Categories",
+    "categoryName": "Category Name",
+    "addCategory": "Add Category",
+    "editCategory": "Edit Category",
+    "dishes": "Dishes",
+    "addDish": "Add Dish",
+    "editDish": "Edit Dish",
+    "dishName": "Dish Name",
+    "description": "Description",
+    "dishDescriptionPlaceholder": "Describe the dish — features, cooking method, sides…",
+    "price": "Price",
+    "imageUrl": "Image",
+    "recipe": "Recipe",
+    "recipeIsPrivate": "Keep recipe private (only I can see)",
+    "ingredients": "Ingredients",
+    "clickToAddIngredient": "Tap + to add an ingredient, × to remove",
+    "continueAdding": "Continue adding...",
+    "deleteMenuGroup": "Delete Carte",
+    "deleteMenuGroupConfirm": "Delete \"{{name}}\"? This will also delete all categories and dishes.",
+    "deleteDish": "Delete Dish",
+    "deleteDishConfirm": "Delete \"{{name}}\"? This cannot be undone.",
+    "activeOrders": "Active Orders",
+    "noActiveOrders": "No active orders",
+    "shoppingList": "Shopping List",
+    "wishlist": "Wishlist",
+    "editMode": "EDIT"
+  },
+  "diner": {
+    "myMenus": "My Menus",
+    "joinMenu": "Join a Carte",
+    "joinKitchen": "Join Kitchen",
+    "enterChefCode": "Enter Carte Code",
+    "carteCodeLabel": "Carte Code",
+    "enterPassword": "Enter PIN",
+    "viewMenu": "View Menu",
+    "addToCart": "Add to Cart",
+    "addedToCart": "Added to cart",
+    "placeOrder": "Place Order",
+    "addToWishlist": "Add to Wishlist",
+    "menuNotFound": "Menu not found",
+    "publicCarteNoPin": "This is a public carte. No PIN required.",
+    "carteCodeNotFound": "Carte Code not found",
+    "wrongPin": "Wrong PIN",
+    "joinedKitchen": "Joined!"
+  },
+  "dish": {
+    "comments": "Comments",
+    "noComments": "No comments yet. Be the first!",
+    "writeComment": "Write a comment...",
+    "deleteComment": "Delete comment?",
+    "deleted": "Deleted"
+  },
+  "orders": {
+    "pending": "Pending",
+    "preparing": "Preparing",
+    "ready": "Ready",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "newOrderReceived": "New order received",
+    "orderStatusUpdated": "Order is now {{status}}"
+  },
+  "errors": {
+    "generic": "Something went wrong",
+    "imageTooLarge": "Image must be under 5 MB",
+    "network": "Network error, please retry",
+    "missingFields": "Please fill in required fields"
+  }
+}

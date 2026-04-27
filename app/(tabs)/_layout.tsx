@@ -1,33 +1,46 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
+import { ChefHat, Compass, User } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
+import { BOTTOM_NAV_HEIGHT, BRAND } from '@/lib/constants';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function TabsLayout() {
+  const { t } = useTranslation();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+        tabBarActiveTintColor: BRAND.textPrimary,
+        tabBarInactiveTintColor: '#A3A3A3',
+        tabBarStyle: {
+          backgroundColor: BRAND.background,
+          borderTopColor: BRAND.border,
+          height: BOTTOM_NAV_HEIGHT + 16,
+          paddingTop: 6,
+          paddingBottom: 12,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
+      }}
+    >
       <Tabs.Screen
-        name="index"
+        name="kitchen"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: t('tabs.kitchen'),
+          tabBarIcon: ({ color, size }) => <ChefHat size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="discover"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: t('tabs.discover'),
+          tabBarIcon: ({ color, size }) => <Compass size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: t('tabs.profile'),
+          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
         }}
       />
     </Tabs>

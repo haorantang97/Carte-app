@@ -1,13 +1,11 @@
-import { type InfiniteData, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
-import { discoverFeedKey, type FeedPage } from '@/hooks/feed/useDiscoverFeed';
 import { dishDetailKey, type DishDetail } from '@/hooks/dish/useDishDetail';
 
 /**
- * Toggle a like with optimistic update applied to:
- *  - the discover-feed cache (so the heart fills immediately on the masonry)
- *  - the dish-detail cache (so the header heart updates without round-trip)
+ * Toggle a like, optimistically updating the dish-detail cache.
+ * (Discover feed was removed in the P0 IA refactor.)
  */
 export function useToggleDishLike() {
   const { user } = useSession();
@@ -31,31 +29,8 @@ export function useToggleDishLike() {
       }
     },
     onMutate: async ({ dishId, liked }) => {
-      await qc.cancelQueries({ queryKey: discoverFeedKey });
       await qc.cancelQueries({ queryKey: dishDetailKey(dishId) });
-
-      const prevFeed = qc.getQueryData<InfiniteData<FeedPage>>(discoverFeedKey);
-      const prevDetail = qc.getQueryData<DishDetail>(dishDetailKey(dishId));
-
-      qc.setQueryData<InfiniteData<FeedPage> | undefined>(discoverFeedKey, (cur) => {
-        if (!cur) return cur;
-        return {
-          ...cur,
-          pages: cur.pages.map((page) => ({
-            ...page,
-            items: page.items.map((d) =>
-              d.id === dishId
-                ? {
-                    ...d,
-                    liked_by_me: !liked,
-                    likes_count: Math.max(0, d.likes_count + (liked ? -1 : 1)),
-                  }
-                : d,
-            ),
-          })),
-        };
-      });
-
+      const prev = qc.getQueryData<DishDetail>(dishDetailKey(dishId));
       qc.setQueryData<DishDetail | undefined>(dishDetailKey(dishId), (cur) =>
         cur
           ? {
@@ -65,12 +40,10 @@ export function useToggleDishLike() {
             }
           : cur,
       );
-
-      return { prevFeed, prevDetail, dishId };
+      return { prev, dishId };
     },
     onError: (_err, _vars, ctx) => {
-      if (ctx?.prevFeed) qc.setQueryData(discoverFeedKey, ctx.prevFeed);
-      if (ctx && ctx.prevDetail) qc.setQueryData(dishDetailKey(ctx.dishId), ctx.prevDetail);
+      if (ctx?.prev) qc.setQueryData(dishDetailKey(ctx.dishId), ctx.prev);
     },
   });
 }

@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { ChefHat, Compass, User } from 'lucide-react-native';
+import { ChefHat, ScrollText } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { BOTTOM_NAV_HEIGHT, BRAND } from '@/lib/constants';
 
@@ -25,22 +25,15 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="kitchen"
         options={{
-          title: t('tabs.kitchen'),
+          title: t('chef.myMenuGroups'),
           tabBarIcon: ({ color, size }) => <ChefHat size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="discover"
+        name="orders"
         options={{
-          title: t('tabs.discover'),
-          tabBarIcon: ({ color, size }) => <Compass size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: t('tabs.profile'),
-          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
+          title: t('chef.activeOrders'),
+          tabBarIcon: ({ color, size }) => <ScrollText size={size} color={color} />,
         }}
       />
     </Tabs>

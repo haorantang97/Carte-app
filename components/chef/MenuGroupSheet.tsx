@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Switch, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw } from 'lucide-react-native';
 import { Sheet } from '@/components/ui/Sheet';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import {
   useCreateMenuGroup,
+  useSetCartePassword,
   useUpdateMenuGroup,
 } from '@/hooks/chef/useMenuGroups';
 import {
@@ -25,24 +26,37 @@ interface Props {
   group?: MenuGroup | null;
 }
 
+/**
+ * Single-form Carte editor.
+ * 修复:原版"切换私密"和"设置 PIN"是两个独立操作 + 中间不存在状态。
+ * 这里把 name / access_code / is_private / PIN 全放在一张表单,一次保存。
+ */
 export function MenuGroupSheet({ visible, onClose, group }: Props) {
   const { t } = useTranslation();
   const create = useCreateMenuGroup();
   const update = useUpdateMenuGroup();
+  const setPin = useSetCartePassword();
 
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [pin, setPinValue] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const wasPrivate = !!group?.is_private;
 
   useEffect(() => {
     if (!visible) return;
     if (group) {
       setName(group.name);
       setCode(group.access_code);
+      setIsPrivate(group.is_private);
     } else {
       setName('');
       setCode(generateCarteCode());
+      setIsPrivate(false);
     }
+    setPinValue('');
   }, [visible, group]);
 
   const onSave = async () => {
@@ -55,13 +69,48 @@ export function MenuGroupSheet({ visible, onClose, group }: Props) {
       showToast.error('Invalid Carte Code');
       return;
     }
+    // If user wants private but new carte (or never set PIN), require a PIN
+    if (isPrivate && !group && !pin.trim()) {
+      showToast.error(t('chef.enterPasswordToMakePrivate'));
+      return;
+    }
+    if (isPrivate && !wasPrivate && !pin.trim()) {
+      showToast.error(t('chef.enterPasswordToMakePrivate'));
+      return;
+    }
+
     setSubmitting(true);
     try {
+      let groupId: string;
+
       if (group) {
-        await update.mutateAsync({ id: group.id, name: name.trim(), access_code: cleanCode });
+        const updated = await update.mutateAsync({
+          id: group.id,
+          name: name.trim(),
+          access_code: cleanCode,
+        });
+        groupId = updated.id;
       } else {
-        await create.mutateAsync({ name: name.trim(), access_code: cleanCode });
+        const created = await create.mutateAsync({
+          name: name.trim(),
+          access_code: cleanCode,
+        });
+        groupId = created.id;
       }
+
+      // Privacy / PIN
+      const togglingPrivacy = isPrivate !== wasPrivate;
+      const settingPinFresh = isPrivate && pin.trim().length > 0;
+      const turningPublic = !isPrivate && wasPrivate;
+
+      if (togglingPrivacy || settingPinFresh) {
+        // PIN to send: empty string clears (turns public); non-empty sets/replaces
+        await setPin.mutateAsync({
+          groupId,
+          pin: turningPublic ? '' : pin.trim(),
+        });
+      }
+
       onClose();
     } catch (e: any) {
       showToast.error(e?.message ?? 'Failed to save');
@@ -109,9 +158,40 @@ export function MenuGroupSheet({ visible, onClose, group }: Props) {
               <RefreshCw size={16} color="#404040" />
             </Pressable>
           </View>
-          <Text style={tw`mt-1 text-[11px] text-gray-500`}>
-            6 chars (A–Z, 2–9). Long-press a Carte card later to copy.
-          </Text>
+        </View>
+
+        {/* Privacy + PIN inline */}
+        <View style={tw`bg-gray-50 rounded-lg p-3`}>
+          <View style={tw`flex-row items-center justify-between`}>
+            <View style={tw`flex-1`}>
+              <Text style={tw`text-sm font-medium text-gray-900`}>{t('chef.private')}</Text>
+              <Text style={tw`text-[11px] text-gray-500 mt-0.5`}>
+                {t('chef.enterPasswordToMakePrivate')}
+              </Text>
+            </View>
+            <Switch
+              value={isPrivate}
+              onValueChange={setIsPrivate}
+              trackColor={{ false: '#D4D4D4', true: '#A68B6A' }}
+              thumbColor="white"
+            />
+          </View>
+          {isPrivate ? (
+            <View style={tw`mt-3`}>
+              <Input
+                value={pin}
+                onChangeText={(v) => setPinValue(v.replace(/[^0-9]/g, '').slice(0, 8))}
+                keyboardType="number-pad"
+                secureTextEntry
+                maxLength={8}
+                placeholder={
+                  isEdit && wasPrivate
+                    ? '留空保持原 PIN'
+                    : '4–8 digits'
+                }
+              />
+            </View>
+          ) : null}
         </View>
 
         <View style={tw`flex-row gap-2 mt-3`}>

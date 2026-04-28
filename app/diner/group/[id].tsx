@@ -27,6 +27,7 @@ export default function DinerGroupDetails() {
 
   const [activeCatId, setActiveCatId] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [tab, setTab] = useState<'menu' | 'wishlist'>('menu');
 
   const categories = data?.categories ?? [];
   useEffect(() => {
@@ -101,47 +102,81 @@ export default function DinerGroupDetails() {
         </View>
       </View>
 
-      {/* Categories */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={tw`px-4 pb-3 gap-2`}
-      >
-        {categories.map((c) => {
-          const active = c.id === activeCatId;
+      {/* Top section toggle: 菜单 / 愿望 */}
+      <View style={tw`px-4 pb-3 flex-row gap-2`}>
+        {(['menu', 'wishlist'] as const).map((k) => {
+          const active = k === tab;
           return (
             <Pressable
-              key={c.id}
+              key={k}
               onPress={() => {
                 Haptics.selectionAsync().catch(() => {});
-                setActiveCatId(c.id);
+                setTab(k);
               }}
               style={tw.style(
-                'rounded-full px-4 py-2 border',
-                active ? 'bg-gray-900 border-gray-900' : 'bg-white border-gray-200',
+                'flex-1 py-2 rounded-full items-center',
+                active ? 'bg-gray-900' : 'bg-white border border-gray-200',
               )}
             >
-              <Text style={tw.style('text-xs font-medium', active ? 'text-white' : 'text-gray-700')}>
-                {c.name}
+              <Text
+                style={tw.style(
+                  'text-xs font-medium',
+                  active ? 'text-white' : 'text-gray-700',
+                )}
+              >
+                {k === 'menu' ? t('chef.dishes') : t('chef.wishlist')}
               </Text>
             </Pressable>
           );
         })}
-      </ScrollView>
+      </View>
 
-      {/* Dishes + Wishlist */}
-      <ScrollView contentContainerStyle={tw`px-4 pb-32 gap-2`}>
-        {visibleDishes.length === 0 ? (
-          <EmptyState title={t('discover.noPublicDishesYet')} />
-        ) : (
-          visibleDishes.map((d) => (
-            <DishCardCompact key={d.id} dish={d} onAdd={() => onAdd(d.id)} />
-          ))
-        )}
-        <View style={tw`mt-6 pt-4 border-t border-gray-200`}>
-          <WishlistSection groupId={groupId} />
-        </View>
-      </ScrollView>
+      {tab === 'wishlist' ? (
+        <ScrollView contentContainerStyle={tw`px-4 pb-32`}>
+          <WishlistSection groupId={groupId} canCompose={true} />
+        </ScrollView>
+      ) : (
+        <>
+          {/* Categories */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={tw`px-4 pb-3 gap-2`}
+          >
+            {categories.map((c) => {
+              const active = c.id === activeCatId;
+              return (
+                <Pressable
+                  key={c.id}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setActiveCatId(c.id);
+                  }}
+                  style={tw.style(
+                    'rounded-full px-4 py-2 border',
+                    active ? 'bg-gray-900 border-gray-900' : 'bg-white border-gray-200',
+                  )}
+                >
+                  <Text style={tw.style('text-xs font-medium', active ? 'text-white' : 'text-gray-700')}>
+                    {c.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {/* Dishes */}
+          <ScrollView contentContainerStyle={tw`px-4 pb-32 gap-2`}>
+            {visibleDishes.length === 0 ? (
+              <EmptyState title={t('discover.noPublicDishesYet')} />
+            ) : (
+              visibleDishes.map((d) => (
+                <DishCardCompact key={d.id} dish={d} onAdd={() => onAdd(d.id)} />
+              ))
+            )}
+          </ScrollView>
+        </>
+      )}
 
       <CartFAB count={count} onPress={() => setCartOpen(true)} />
       <CartSheet visible={cartOpen} onClose={() => setCartOpen(false)} groupId={groupId} />

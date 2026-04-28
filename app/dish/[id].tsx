@@ -212,7 +212,7 @@ export default function DishDetailScreen() {
             <CommentList
               comments={comments ?? []}
               myUserId={user?.id}
-              onLongPressOwn={(c) => setPendingDelete(c)}
+              onDelete={(c) => setPendingDelete(c)}
             />
           </View>
         </ScrollView>

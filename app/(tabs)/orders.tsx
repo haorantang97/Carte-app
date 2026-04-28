@@ -118,6 +118,7 @@ export default function OrdersTab() {
                   groupName={o.group_name}
                   partyLabel={o.diner_username}
                   createdAt={o.created_at}
+                  ingredients={o.dish_ingredients}
                   onAdvance={
                     next
                       ? { label: t(`orders.${next}` as any), onPress: () => onAdvance(o.id, next) }

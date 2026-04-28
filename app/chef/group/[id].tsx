@@ -3,13 +3,12 @@ import {
   ActivityIndicator,
   Pressable,
   ScrollView,
-  Switch,
   Text,
   View,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Plus } from 'lucide-react-native';
+import { Pencil, Plus, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { AppContainer } from '@/components/ui/AppContainer';
 import { BackButton } from '@/components/ui/BackButton';
@@ -18,7 +17,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { CategorySheet } from '@/components/chef/CategorySheet';
 import { DishCard } from '@/components/chef/DishCard';
 import { DishSheet } from '@/components/chef/DishSheet';
-import { PrivacyPasswordSheet } from '@/components/chef/PrivacyPasswordSheet';
+import { WishlistSection } from '@/components/wishlist/WishlistSection';
 import { showToast } from '@/components/ui/Toast';
 import { useChefGroupDetails } from '@/hooks/chef/useChefGroupDetails';
 import { useDeleteCategory } from '@/hooks/chef/useCategoryMutations';
@@ -34,18 +33,14 @@ export default function ChefGroupDetails() {
   const delCategory = useDeleteCategory(groupId);
   const delDish = useDeleteDish(groupId);
 
-  const [editMode, setEditMode] = useState(false);
   const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
+  const [tab, setTab] = useState<'menu' | 'wishlist'>('menu');
 
-  // Sheets / dialogs
   const [categorySheet, setCategorySheet] = useState<{ open: boolean; category: Category | null }>(
     { open: false, category: null },
   );
   const [dishSheet, setDishSheet] = useState<{ open: boolean; dish: Dish | null }>(
     { open: false, dish: null },
-  );
-  const [privacySheet, setPrivacySheet] = useState<{ open: boolean; making: boolean }>(
-    { open: false, making: false },
   );
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
   const [deletingDish, setDeletingDish] = useState<Dish | null>(null);
@@ -54,15 +49,14 @@ export default function ChefGroupDetails() {
   const dishes = data?.dishes ?? [];
 
   const activeCatId = selectedCatId ?? categories[0]?.id ?? null;
+  const activeCat = useMemo(
+    () => categories.find((c) => c.id === activeCatId) ?? null,
+    [categories, activeCatId],
+  );
   const visibleDishes = useMemo(
     () => dishes.filter((d) => d.category_id === activeCatId),
     [dishes, activeCatId],
   );
-
-  const onTogglePrivacy = (next: boolean) => {
-    Haptics.selectionAsync().catch(() => {});
-    setPrivacySheet({ open: true, making: next });
-  };
 
   const onConfirmDelCategory = async () => {
     if (!deletingCategory) return;
@@ -116,43 +110,58 @@ export default function ChefGroupDetails() {
         <Text style={tw`flex-1 ml-2 text-xl font-semibold text-gray-900`} numberOfLines={1}>
           {data.group.name}
         </Text>
-        <Pressable
-          onPress={() => setEditMode((v) => !v)}
-          hitSlop={8}
-          style={tw`px-3 py-1.5 rounded-full border border-gray-200`}
+      </View>
+
+      {/* Code row */}
+      <View style={tw`px-4 pb-3 flex-row items-center`}>
+        <Text
+          style={[
+            tw`text-sm text-gray-700`,
+            { fontFamily: 'Menlo', letterSpacing: 2 },
+          ]}
         >
-          <Text style={tw`text-xs text-gray-700`}>
-            {editMode ? t('common.confirm') : t('chef.editMode')}
-          </Text>
-        </Pressable>
+          {data.group.access_code}
+        </Text>
+        {data.group.is_private ? (
+          <Text style={tw`ml-2 text-xs text-[#A68B6A]`}>· {t('chef.private')}</Text>
+        ) : null}
       </View>
 
-      {/* Privacy + code row */}
-      <View style={tw`px-4 pb-3 flex-row items-center justify-between`}>
-        <View style={tw`flex-row items-center`}>
-          <Text
-            style={[
-              tw`text-sm text-gray-700`,
-              { fontFamily: 'Menlo', letterSpacing: 2 },
-            ]}
-          >
-            {data.group.access_code}
-          </Text>
-          {data.group.is_private ? (
-            <Text style={tw`ml-2 text-xs text-[#A68B6A]`}>· {t('chef.private')}</Text>
-          ) : null}
-        </View>
-        <View style={tw`flex-row items-center`}>
-          <Text style={tw`text-xs text-gray-500 mr-2`}>{t('chef.private')}</Text>
-          <Switch
-            value={data.group.is_private}
-            onValueChange={onTogglePrivacy}
-            trackColor={{ false: '#D4D4D4', true: '#A68B6A' }}
-            thumbColor="white"
-          />
-        </View>
+      {/* Top section toggle: 菜单 / 愿望 */}
+      <View style={tw`px-4 pb-3 flex-row gap-2`}>
+        {(['menu', 'wishlist'] as const).map((k) => {
+          const active = k === tab;
+          return (
+            <Pressable
+              key={k}
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => {});
+                setTab(k);
+              }}
+              style={tw.style(
+                'flex-1 py-2 rounded-full items-center',
+                active ? 'bg-gray-900' : 'bg-white border border-gray-200',
+              )}
+            >
+              <Text
+                style={tw.style(
+                  'text-xs font-medium',
+                  active ? 'text-white' : 'text-gray-700',
+                )}
+              >
+                {k === 'menu' ? t('chef.dishes') : t('chef.wishlist')}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
+      {tab === 'wishlist' ? (
+        <ScrollView contentContainerStyle={tw`px-4 pb-32`}>
+          <WishlistSection groupId={groupId} canCompose={false} />
+        </ScrollView>
+      ) : (
+        <>
       {/* Categories tabs */}
       <ScrollView
         horizontal
@@ -168,7 +177,6 @@ export default function ChefGroupDetails() {
                 Haptics.selectionAsync().catch(() => {});
                 setSelectedCatId(c.id);
               }}
-              onLongPress={() => editMode && setCategorySheet({ open: true, category: c })}
               style={tw.style(
                 'rounded-full px-4 py-2 border',
                 active ? 'bg-gray-900 border-gray-900' : 'bg-white border-gray-200',
@@ -185,36 +193,53 @@ export default function ChefGroupDetails() {
             </Pressable>
           );
         })}
-        {editMode ? (
-          <Pressable
-            onPress={() => setCategorySheet({ open: true, category: null })}
-            style={tw`rounded-full px-3 py-2 border border-dashed border-gray-300 flex-row items-center`}
-          >
-            <Plus size={12} color="#737373" />
-            <Text style={tw`ml-1 text-xs text-gray-600`}>{t('chef.addCategory')}</Text>
-          </Pressable>
-        ) : null}
+        <Pressable
+          onPress={() => setCategorySheet({ open: true, category: null })}
+          style={tw`rounded-full px-3 py-2 border border-dashed border-gray-300 flex-row items-center`}
+        >
+          <Plus size={12} color="#737373" />
+          <Text style={tw`ml-1 text-xs text-gray-600`}>{t('chef.addCategory')}</Text>
+        </Pressable>
       </ScrollView>
+
+      {/* Active-category controls (always visible) */}
+      {activeCat ? (
+        <View style={tw`px-4 pb-2 flex-row gap-2`}>
+          <Pressable
+            onPress={() => setCategorySheet({ open: true, category: activeCat })}
+            style={tw`flex-row items-center px-3 py-1.5 rounded-full bg-gray-100`}
+          >
+            <Pencil size={11} color="#525252" />
+            <Text style={tw`ml-1 text-[11px] text-gray-700`}>{t('common.edit')}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setDeletingCategory(activeCat)}
+            style={tw`flex-row items-center px-3 py-1.5 rounded-full bg-red-50`}
+          >
+            <Trash2 size={11} color="#A30000" />
+            <Text style={tw`ml-1 text-[11px] text-red-700`}>{t('common.delete')}</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       {/* Dishes list */}
       <ScrollView contentContainerStyle={tw`px-4 pb-32 gap-3`}>
         {!activeCatId ? (
           <EmptyState title={t('chef.noCategoriesYet')} />
-        ) : visibleDishes.length === 0 && !editMode ? (
+        ) : visibleDishes.length === 0 ? (
           <EmptyState title={t('discover.noPublicDishesYet')} />
         ) : (
           visibleDishes.map((d) => (
             <DishCard
               key={d.id}
               dish={d}
-              editMode={editMode}
               onEdit={() => setDishSheet({ open: true, dish: d })}
               onDelete={() => setDeletingDish(d)}
             />
           ))
         )}
 
-        {editMode && activeCatId ? (
+        {activeCatId ? (
           <Pressable
             onPress={() => setDishSheet({ open: true, dish: null })}
             style={({ pressed }) => [
@@ -226,34 +251,10 @@ export default function ChefGroupDetails() {
             <Text style={tw`ml-2 text-xs text-gray-600`}>{t('chef.addDish')}</Text>
           </Pressable>
         ) : null}
-
-        {editMode && activeCatId ? (
-          <View style={tw`mt-1 flex-row gap-2`}>
-            <Pressable
-              onPress={() => {
-                const cat = categories.find((c) => c.id === activeCatId);
-                if (cat) setCategorySheet({ open: true, category: cat });
-              }}
-              style={tw`flex-1 px-3 py-2.5 rounded-lg border border-gray-200 items-center`}
-            >
-              <Text style={tw`text-xs text-gray-700`}>
-                {t('common.edit')} · {categories.find((c) => c.id === activeCatId)?.name}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                const cat = categories.find((c) => c.id === activeCatId);
-                if (cat) setDeletingCategory(cat);
-              }}
-              style={tw`px-3 py-2.5 rounded-lg border border-red-200 items-center`}
-            >
-              <Text style={tw`text-xs text-red-600`}>{t('common.delete')}</Text>
-            </Pressable>
-          </View>
-        ) : null}
       </ScrollView>
+        </>
+      )}
 
-      {/* Sheets / dialogs */}
       <CategorySheet
         visible={categorySheet.open}
         onClose={() => setCategorySheet({ open: false, category: null })}
@@ -266,12 +267,6 @@ export default function ChefGroupDetails() {
         groupId={groupId}
         categoryId={activeCatId}
         dish={dishSheet.dish}
-      />
-      <PrivacyPasswordSheet
-        visible={privacySheet.open}
-        onClose={() => setPrivacySheet({ open: false, making: false })}
-        groupId={groupId}
-        isMakingPrivate={privacySheet.making}
       />
       <ConfirmDialog
         visible={!!deletingCategory}

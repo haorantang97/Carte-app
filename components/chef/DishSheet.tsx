@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
-import { Camera } from 'lucide-react-native';
+import { Camera, Sparkles } from 'lucide-react-native';
 import { Sheet } from '@/components/ui/Sheet';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -17,6 +17,7 @@ import { IngredientsInput } from '@/components/chef/IngredientsInput';
 import { showToast } from '@/components/ui/Toast';
 import { useCreateDish, useUpdateDish } from '@/hooks/chef/useDishMutations';
 import { usePickAndUploadImage } from '@/hooks/storage/useImageUpload';
+import { useGenerateDishImage } from '@/hooks/storage/useGenerateDishImage';
 import type { Dish } from '@/types/domain';
 import { parsePrice } from '@/lib/price';
 import tw from '@/lib/tw';
@@ -34,6 +35,7 @@ export function DishSheet({ visible, onClose, groupId, categoryId, dish }: Props
   const create = useCreateDish(groupId);
   const update = useUpdateDish(groupId);
   const upload = usePickAndUploadImage('menu-images');
+  const generate = useGenerateDishImage();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -76,6 +78,23 @@ export function DishSheet({ visible, onClose, groupId, categoryId, dish }: Props
     }
   };
 
+  const aiGenerate = async () => {
+    if (!name.trim()) {
+      showToast.error('先填菜品名,AI 才能根据它生成图');
+      return;
+    }
+    try {
+      const url = await generate.mutateAsync({
+        name: name.trim(),
+        description: description.trim() || undefined,
+      });
+      setImageUrl(url);
+      showToast.success('AI 生图完成');
+    } catch (e: any) {
+      showToast.error(e?.message ?? 'Failed to generate');
+    }
+  };
+
   const onSave = async () => {
     if (!name.trim()) {
       showToast.error(t('errors.missingFields'));
@@ -109,6 +128,8 @@ export function DishSheet({ visible, onClose, groupId, categoryId, dish }: Props
     }
   };
 
+  const isBusyImage = upload.isPending || generate.isPending;
+
   return (
     <Sheet
       visible={visible}
@@ -117,27 +138,76 @@ export function DishSheet({ visible, onClose, groupId, categoryId, dish }: Props
     >
       <ScrollView style={{ maxHeight: 560 }} showsVerticalScrollIndicator={false}>
         <View style={tw`gap-3 mt-1`}>
-          {/* Image picker */}
+          {/* Image preview area */}
           <Pressable
             onPress={pickImage}
-            disabled={upload.isPending}
+            disabled={isBusyImage}
             style={tw`bg-gray-100 rounded-xl overflow-hidden`}
           >
-            {imageUrl ? (
-              <Image source={{ uri: imageUrl }} style={[tw`w-full`, { aspectRatio: 16 / 9 }]} contentFit="cover" />
+            {imageUrl && !isBusyImage ? (
+              <Image
+                source={{ uri: imageUrl }}
+                style={[tw`w-full`, { aspectRatio: 1 }]}
+                contentFit="cover"
+              />
             ) : (
-              <View style={[tw`w-full items-center justify-center`, { aspectRatio: 16 / 9 }]}>
-                {upload.isPending ? (
+              <View style={[tw`w-full items-center justify-center`, { aspectRatio: 1 }]}>
+                {generate.isPending ? (
+                  <>
+                    <ActivityIndicator size="small" color="#A68B6A" />
+                    <Text style={tw`mt-2 text-xs text-[#A68B6A] font-medium`}>
+                      AI 正在画…
+                    </Text>
+                    <Text style={tw`mt-1 text-[10px] text-gray-500`}>约 60-90 秒</Text>
+                  </>
+                ) : upload.isPending ? (
                   <ActivityIndicator size="small" color="#737373" />
                 ) : (
                   <>
                     <Camera size={20} color="#737373" />
-                    <Text style={tw`mt-1 text-xs text-gray-500`}>{t('chef.imageUrl')}</Text>
+                    <Text style={tw`mt-1 text-xs text-gray-500`}>
+                      {t('chef.imageUrl')}
+                    </Text>
                   </>
                 )}
               </View>
             )}
           </Pressable>
+
+          {/* Image action row: 上传 + ✨AI */}
+          <View style={tw`flex-row gap-2`}>
+            <Pressable
+              onPress={pickImage}
+              disabled={isBusyImage}
+              style={({ pressed }) => [
+                tw`flex-1 flex-row items-center justify-center bg-white border border-gray-200 rounded-lg py-2.5`,
+                { opacity: isBusyImage ? 0.4 : pressed ? 0.7 : 1 },
+              ]}
+            >
+              <Camera size={14} color="#404040" />
+              <Text style={tw`ml-1.5 text-xs font-medium text-gray-700`}>上传</Text>
+            </Pressable>
+            <Pressable
+              onPress={aiGenerate}
+              disabled={isBusyImage}
+              style={({ pressed }) => [
+                tw`flex-1 flex-row items-center justify-center rounded-lg py-2.5`,
+                {
+                  backgroundColor: '#A68B6A',
+                  opacity: isBusyImage ? 0.4 : pressed ? 0.75 : 1,
+                },
+              ]}
+            >
+              {generate.isPending ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <>
+                  <Sparkles size={14} color="white" />
+                  <Text style={tw`ml-1.5 text-xs font-medium text-white`}>AI 生图</Text>
+                </>
+              )}
+            </Pressable>
+          </View>
 
           <Input
             label={t('chef.dishName')}

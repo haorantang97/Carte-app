@@ -18,6 +18,7 @@ import { showToast } from '@/components/ui/Toast';
 import { useCreateDish, useUpdateDish } from '@/hooks/chef/useDishMutations';
 import { usePickAndUploadImage } from '@/hooks/storage/useImageUpload';
 import { useGenerateDishImage } from '@/hooks/storage/useGenerateDishImage';
+import { SmartFillSheet } from '@/components/chef/SmartFillSheet';
 import type { Dish } from '@/types/domain';
 import { parsePrice } from '@/lib/price';
 import tw from '@/lib/tw';
@@ -45,6 +46,7 @@ export function DishSheet({ visible, onClose, groupId, categoryId, dish }: Props
   const [recipeIsPrivate, setRecipeIsPrivate] = useState(false);
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [smartFillOpen, setSmartFillOpen] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
@@ -138,6 +140,21 @@ export function DishSheet({ visible, onClose, groupId, categoryId, dish }: Props
     >
       <ScrollView style={{ maxHeight: 560 }} showsVerticalScrollIndicator={false}>
         <View style={tw`gap-3 mt-1`}>
+          {/* ✨ 智能填充入口(链接 / 文字 / 图片三选一,Gemini 抽食谱)*/}
+          <Pressable
+            onPress={() => setSmartFillOpen(true)}
+            disabled={isBusyImage}
+            style={({ pressed }) => [
+              tw`flex-row items-center justify-center bg-[#FAF6EE] border border-[#A68B6A] rounded-xl py-3`,
+              { opacity: isBusyImage ? 0.4 : pressed ? 0.75 : 1 },
+            ]}
+          >
+            <Sparkles size={14} color="#A68B6A" />
+            <Text style={tw`ml-1.5 text-xs font-semibold text-[#A68B6A]`}>
+              ✨ 智能填充菜品(链接 / 文字 / 图片)
+            </Text>
+          </Pressable>
+
           {/* Image preview area */}
           <Pressable
             onPress={pickImage}
@@ -275,6 +292,18 @@ export function DishSheet({ visible, onClose, groupId, categoryId, dish }: Props
           </View>
         </View>
       </ScrollView>
+
+      <SmartFillSheet
+        visible={smartFillOpen}
+        onClose={() => setSmartFillOpen(false)}
+        onExtracted={(fields) => {
+          // Only fill empty fields, never override user-edited content
+          if (!name.trim()) setName(fields.name);
+          if (!description.trim()) setDescription(fields.description);
+          if (ingredients.length === 0) setIngredients(fields.ingredients);
+          if (!recipe.trim()) setRecipe(fields.recipe);
+        }}
+      />
     </Sheet>
   );
 }

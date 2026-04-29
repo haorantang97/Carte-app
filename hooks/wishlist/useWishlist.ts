@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
+import { cacheBus } from '@/lib/cacheKeys';
 
 export type WishlistRow = {
   id: string;
@@ -99,7 +100,7 @@ export function useCreateWishlistItem(groupId: string) {
       });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: wishlistKey(groupId) }),
+    onSuccess: () => cacheBus.afterWishlistMutate(qc, groupId),
   });
 }
 
@@ -112,6 +113,6 @@ export function useToggleWishlistVote(groupId: string) {
       });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: wishlistKey(groupId) }),
+    onSuccess: () => cacheBus.afterWishlistMutate(qc, groupId),
   });
 }

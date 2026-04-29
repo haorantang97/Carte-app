@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
+import { cacheBus } from '@/lib/cacheKeys';
 import type { OrderStatus } from '@/types/domain';
 
 export type ChefOrderRow = {
@@ -98,7 +99,7 @@ export function useUpdateOrderStatus() {
         .eq('id', input.id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: chefOrdersKey(user?.id) }),
+    onSuccess: () => cacheBus.afterOrderStatusChange(qc, user?.id),
   });
 }
 
@@ -110,6 +111,6 @@ export function useDeleteOrder() {
       const { error } = await supabase.from('orders').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: chefOrdersKey(user?.id) }),
+    onSuccess: () => cacheBus.afterOrderStatusChange(qc, user?.id),
   });
 }

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { chefGroupKey } from './useChefGroupDetails';
+import { cacheBus } from '@/lib/cacheKeys';
 
 export function useCreateCategory(groupId: string) {
   const qc = useQueryClient();
@@ -11,7 +11,7 @@ export function useCreateCategory(groupId: string) {
         .insert({ group_id: groupId, name: name.trim() });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: chefGroupKey(groupId) }),
+    onSuccess: () => cacheBus.afterCategoryMutate(qc, groupId),
   });
 }
 
@@ -25,7 +25,7 @@ export function useUpdateCategory(groupId: string) {
         .eq('id', input.id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: chefGroupKey(groupId) }),
+    onSuccess: () => cacheBus.afterCategoryMutate(qc, groupId),
   });
 }
 
@@ -36,6 +36,6 @@ export function useDeleteCategory(groupId: string) {
       const { error } = await supabase.from('categories').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: chefGroupKey(groupId) }),
+    onSuccess: () => cacheBus.afterCategoryMutate(qc, groupId),
   });
 }

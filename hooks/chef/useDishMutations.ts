@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { DishInsert, DishUpdate } from '@/types/domain';
-import { chefGroupKey } from './useChefGroupDetails';
+import { cacheBus } from '@/lib/cacheKeys';
 
 export function useCreateDish(groupId: string) {
   const qc = useQueryClient();
@@ -12,7 +12,7 @@ export function useCreateDish(groupId: string) {
         .insert({ ...input, group_id: groupId });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: chefGroupKey(groupId) }),
+    onSuccess: () => cacheBus.afterDishMutate(qc, groupId),
   });
 }
 
@@ -25,8 +25,9 @@ export function useUpdateDish(groupId: string) {
         .update(input.patch)
         .eq('id', input.id);
       if (error) throw error;
+      return input.id;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: chefGroupKey(groupId) }),
+    onSuccess: (dishId) => cacheBus.afterDishMutate(qc, groupId, dishId),
   });
 }
 
@@ -36,7 +37,8 @@ export function useDeleteDish(groupId: string) {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('dishes').delete().eq('id', id);
       if (error) throw error;
+      return id;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: chefGroupKey(groupId) }),
+    onSuccess: (id) => cacheBus.afterDishDelete(qc, groupId, id),
   });
 }

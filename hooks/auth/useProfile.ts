@@ -1,9 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { cacheBus, profileKey } from '@/lib/cacheKeys';
 import type { Profile, ProfileUpdate } from '@/types/domain';
 import { useSession } from './useSession';
-
-const profileKey = (userId: string | undefined) => ['profile', userId] as const;
 
 export function useProfile() {
   const { user } = useSession();
@@ -37,8 +36,6 @@ export function useUpdateProfile() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: profileKey(user?.id) });
-    },
+    onSuccess: () => cacheBus.afterProfileUpdate(qc, user?.id),
   });
 }

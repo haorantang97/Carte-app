@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
+import { cacheBus, dishCommentsKey } from '@/lib/cacheKeys';
 
 export type DishCommentRow = {
   id: string;
@@ -12,7 +13,7 @@ export type DishCommentRow = {
   avatar_url: string | null;
 };
 
-const dishCommentsKey = (dishId: string) => ['dish-comments', dishId] as const;
+export { dishCommentsKey };
 
 export function useDishComments(dishId: string | undefined) {
   const qc = useQueryClient();
@@ -67,6 +68,7 @@ export function useDishComments(dishId: string | undefined) {
 
 export function usePostComment(dishId: string) {
   const { user } = useSession();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async (content: string) => {
       if (!user?.id) throw new Error('Not signed in');
@@ -77,14 +79,19 @@ export function usePostComment(dishId: string) {
         .insert({ dish_id: dishId, user_id: user.id, content: trimmed });
       if (error) throw error;
     },
+    // Realtime in useDishComments handles the typical case, but we also
+    // bust here for resilience (offline → realtime catches up only after reconnect).
+    onSuccess: () => cacheBus.afterCommentMutate(qc, dishId),
   });
 }
 
-export function useDeleteComment() {
+export function useDeleteComment(dishId: string) {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('dish_comments').delete().eq('id', id);
       if (error) throw error;
     },
+    onSuccess: () => cacheBus.afterCommentMutate(qc, dishId),
   });
 }

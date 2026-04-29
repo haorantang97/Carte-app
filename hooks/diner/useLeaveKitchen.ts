@@ -1,8 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
-import { joinedKitchensKey } from './useJoinedKitchens';
-import { myCartesKey } from '@/hooks/carte/useMyCartes';
+import { cacheBus } from '@/lib/cacheKeys';
 
 export function useLeaveKitchen() {
   const { user } = useSession();
@@ -17,9 +16,6 @@ export function useLeaveKitchen() {
         .eq('diner_id', user.id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: joinedKitchensKey(user?.id) });
-      qc.invalidateQueries({ queryKey: myCartesKey(user?.id) });
-    },
+    onSuccess: () => cacheBus.afterCarteLeave(qc, user?.id),
   });
 }

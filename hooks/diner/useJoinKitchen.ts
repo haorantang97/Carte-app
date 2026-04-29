@@ -2,8 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
 import { normalizeCarteCode } from '@/lib/carteCode';
-import { myCartesKey } from '@/hooks/carte/useMyCartes';
-import { joinedKitchensKey } from './useJoinedKitchens';
+import { cacheBus } from '@/lib/cacheKeys';
 
 export type JoinError = 'NOT_FOUND' | 'PIN_REQUIRED' | 'WRONG_PIN' | 'OTHER';
 
@@ -78,9 +77,6 @@ export function useJoinKitchen() {
 
       return found;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: joinedKitchensKey(user?.id) });
-      qc.invalidateQueries({ queryKey: myCartesKey(user?.id) });
-    },
+    onSuccess: () => cacheBus.afterCarteJoin(qc, user?.id),
   });
 }

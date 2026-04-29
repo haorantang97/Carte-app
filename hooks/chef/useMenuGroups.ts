@@ -1,20 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
-import { myCartesKey } from '@/hooks/carte/useMyCartes';
+import { cacheBus, menuGroupsKey } from '@/lib/cacheKeys';
 import type { MenuGroup } from '@/types/domain';
 
-export const menuGroupsKey = (userId: string | undefined) => ['menu-groups', userId] as const;
-
-/**
- * Kitchen tab reads the merged `my-cartes` cache (own + joined). Every
- * mutation that changes menu_groups for this user must bust BOTH caches:
- * `menu-groups` (legacy/internal) AND `my-cartes` (UI source of truth).
- */
-function bustKeys(qc: ReturnType<typeof useQueryClient>, userId: string | undefined) {
-  qc.invalidateQueries({ queryKey: menuGroupsKey(userId) });
-  qc.invalidateQueries({ queryKey: myCartesKey(userId) });
-}
+export { menuGroupsKey };
 
 export function useMenuGroups() {
   const { user } = useSession();
@@ -51,7 +41,7 @@ export function useCreateMenuGroup() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => bustKeys(qc, user?.id),
+    onSuccess: () => cacheBus.afterCarteCreate(qc, user?.id),
   });
 }
 
@@ -70,7 +60,7 @@ export function useUpdateMenuGroup() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => bustKeys(qc, user?.id),
+    onSuccess: (data) => cacheBus.afterCarteUpdate(qc, user?.id, data.id),
   });
 }
 
@@ -81,8 +71,9 @@ export function useDeleteMenuGroup() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('menu_groups').delete().eq('id', id);
       if (error) throw error;
+      return id;
     },
-    onSuccess: () => bustKeys(qc, user?.id),
+    onSuccess: (id) => cacheBus.afterCarteDelete(qc, user?.id, id),
   });
 }
 
@@ -101,8 +92,8 @@ export function useSetCartePassword() {
       });
       if (error) throw error;
       if (!data) throw new Error('Failed to set PIN');
-      return data;
+      return input.groupId;
     },
-    onSuccess: () => bustKeys(qc, user?.id),
+    onSuccess: (groupId) => cacheBus.afterCarteUpdate(qc, user?.id, groupId),
   });
 }

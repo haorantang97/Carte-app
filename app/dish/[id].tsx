@@ -42,7 +42,7 @@ export default function DishDetailScreen() {
   const { data: dish, isLoading, error } = useDishDetail(dishId);
   const { data: comments } = useDishComments(dishId);
   const toggle = useToggleDishLike();
-  const del = useDeleteComment();
+  const del = useDeleteComment(dishId);
 
   const [pendingDelete, setPendingDelete] = useState<DishCommentRow | null>(null);
 

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
 import { useCart } from '@/stores/cartStore';
+import { cacheBus } from '@/lib/cacheKeys';
 
 interface SubmitInput {
   groupId: string;
@@ -57,11 +58,6 @@ export function useCreateOrder() {
       cart.clearGroup(input.groupId);
       return session.id;
     },
-    onSuccess: (_id, vars) => {
-      qc.invalidateQueries({ queryKey: ['my-orders', user?.id] });
-      // Chef-side cache may be open in another tab/instance — invalidate for them too
-      qc.invalidateQueries({ queryKey: ['chef-orders'] });
-      // Realtime takes care of the chef notification
-    },
+    onSuccess: () => cacheBus.afterOrderCreate(qc, user?.id),
   });
 }

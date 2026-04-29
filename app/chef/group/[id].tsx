@@ -24,6 +24,9 @@ import { showToast } from '@/components/ui/Toast';
 import { useChefGroupDetails } from '@/hooks/chef/useChefGroupDetails';
 import { useDeleteCategory } from '@/hooks/chef/useCategoryMutations';
 import { useDeleteDish } from '@/hooks/chef/useDishMutations';
+import { useRetryExtractDish } from '@/hooks/storage/useStartExtractDish';
+import { useRealtimeDishes } from '@/hooks/realtime/useRealtimeDishes';
+import { supabase } from '@/lib/supabase';
 import type { Category, Dish } from '@/types/domain';
 import tw from '@/lib/tw';
 
@@ -34,6 +37,13 @@ export default function ChefGroupDetails() {
   const { data, isLoading, error } = useChefGroupDetails(groupId);
   const delCategory = useDeleteCategory(groupId);
   const delDish = useDeleteDish(groupId);
+  const retry = useRetryExtractDish();
+  // Realtime: dish row changes (extract progress / fields filled in) push to UI
+  useRealtimeDishes(groupId);
+  // Sweep stuck extractions (>5min still 'extracting') on page load
+  useMemo(() => {
+    void supabase.rpc('sweep_stuck_extractions');
+  }, [groupId]);
 
   const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
   const [tab, setTab] = useState<'menu' | 'wishlist'>('menu');
@@ -244,6 +254,13 @@ export default function ChefGroupDetails() {
                 setDishSheet({ open: true, dish: d, mode: 'manual', prefill: null })
               }
               onDelete={() => setDeletingDish(d)}
+              onRetry={
+                d.extract_status === 'error'
+                  ? () => {
+                      retry.mutate({ dishId: d.id, groupId });
+                    }
+                  : undefined
+              }
             />
           ))
         )}
@@ -290,23 +307,12 @@ export default function ChefGroupDetails() {
         onPickSmart={() => setSmartFillStandaloneOpen(true)}
       />
 
-      {/* AI 整理路径(独立 sheet,完成后跳到 DishSheet 预览) */}
+      {/* AI 整理路径:非阻塞 — 提交后立刻关闭,占位卡通过 realtime 推到列表 */}
       <SmartFillSheet
         visible={smartFillStandaloneOpen}
         onClose={() => setSmartFillStandaloneOpen(false)}
-        onExtracted={(fields) =>
-          setDishSheet({
-            open: true,
-            dish: null,
-            mode: 'smart_review',
-            prefill: {
-              name: fields.name,
-              description: fields.description,
-              ingredients: fields.ingredients,
-              recipe: fields.recipe,
-            },
-          })
-        }
+        groupId={groupId}
+        categoryId={activeCatId}
       />
       <ConfirmDialog
         visible={!!deletingCategory}

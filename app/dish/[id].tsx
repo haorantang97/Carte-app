@@ -140,19 +140,62 @@ export default function DishDetailScreen() {
           )}
 
           <View style={tw`px-4 pt-4`}>
-            <View style={tw`self-start px-2.5 py-1 rounded-full bg-gray-100`}>
-              <Text style={tw`text-[10px] text-gray-700`}>{dish.group_name}</Text>
+            {/* Cuisine + carte name pills */}
+            <View style={tw`flex-row gap-1.5 flex-wrap`}>
+              {dish.cuisine ? (
+                <View style={tw`px-2.5 py-1 rounded-full bg-[#FAF6EE] border border-[#E8DEC8]`}>
+                  <Text style={tw`text-[10px] text-[#A68B6A] font-medium`}>{dish.cuisine}</Text>
+                </View>
+              ) : null}
+              <View style={tw`px-2.5 py-1 rounded-full bg-gray-100`}>
+                <Text style={tw`text-[10px] text-gray-700`}>{dish.group_name}</Text>
+              </View>
+              {dish.source_platform ? (
+                <View style={tw`px-2.5 py-1 rounded-full bg-pink-50 border border-pink-100`}>
+                  <Text style={tw`text-[10px] text-pink-700`}>{dish.source_platform}</Text>
+                </View>
+              ) : null}
             </View>
+
             <View style={tw`mt-3 flex-row items-start justify-between`}>
               <Text style={tw`flex-1 text-2xl font-semibold text-gray-900`}>{dish.name}</Text>
-              <Text style={tw`ml-3 text-lg font-medium text-[#A68B6A]`}>
-                {formatPrice(dish.price)}
-              </Text>
+              {dish.price > 0 ? (
+                <Text style={tw`ml-3 text-lg font-medium text-[#A68B6A]`}>
+                  {formatPrice(dish.price)}
+                </Text>
+              ) : null}
             </View>
+
+            {/* Meta line: 时间 · 份量 · 难度 · 千卡 */}
+            {(() => {
+              const parts: string[] = [];
+              if (dish.total_time_min) parts.push(`${dish.total_time_min} 分钟`);
+              if (dish.servings) parts.push(`${dish.servings} 人份`);
+              if (dish.calories) parts.push(`${dish.calories} 千卡`);
+              if (dish.difficulty) {
+                const map: Record<string, string> = { easy: '简单', medium: '中等', hard: '挑战' };
+                parts.push(map[dish.difficulty] ?? dish.difficulty);
+              }
+              return parts.length > 0 ? (
+                <Text style={tw`mt-1.5 text-xs text-gray-500`}>{parts.join(' · ')}</Text>
+              ) : null;
+            })()}
+
             {dish.description ? (
               <Text style={tw`mt-2 text-sm text-gray-700 leading-relaxed`}>
                 {dish.description}
               </Text>
+            ) : null}
+
+            {/* Tags */}
+            {dish.tags && dish.tags.length > 0 ? (
+              <View style={tw`mt-3 flex-row flex-wrap gap-1.5`}>
+                {dish.tags.map((tag) => (
+                  <View key={tag} style={tw`px-2.5 py-1 rounded-full bg-gray-100`}>
+                    <Text style={tw`text-[10px] text-gray-600`}>#{tag}</Text>
+                  </View>
+                ))}
+              </View>
             ) : null}
 
             {/* Chef card */}
@@ -176,25 +219,93 @@ export default function DishDetailScreen() {
               </View>
             </View>
 
+            {/* Nutrition (per serving) */}
+            {dish.nutrition ? (
+              <View style={tw`mt-5`}>
+                <Text style={tw`text-xs font-medium text-gray-700 mb-2`}>营养信息(每份)</Text>
+                <View style={tw`flex-row gap-2`}>
+                  {[
+                    { key: 'protein_g', label: '蛋白质' },
+                    { key: 'fat_g', label: '脂肪' },
+                    { key: 'carbs_g', label: '碳水' },
+                    { key: 'fiber_g', label: '纤维' },
+                  ].map(({ key, label }) => {
+                    const v = (dish.nutrition as Record<string, number | undefined>)?.[key];
+                    return (
+                      <View
+                        key={key}
+                        style={tw`flex-1 bg-gray-50 rounded-lg px-2.5 py-2`}
+                      >
+                        <Text style={tw`text-[10px] text-gray-500`}>{label}</Text>
+                        <Text style={tw`text-sm font-semibold text-gray-900 mt-0.5`}>
+                          {v != null ? `${v}g` : '—'}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : null}
+
             {/* Ingredients */}
             {dish.ingredients.length > 0 ? (
-              <View style={tw`mt-4`}>
+              <View style={tw`mt-5`}>
                 <Text style={tw`text-xs font-medium text-gray-700 mb-2`}>
                   {t('chef.ingredients')}
                 </Text>
                 <View style={tw`flex-row flex-wrap gap-1.5`}>
-                  {dish.ingredients.map((i) => (
-                    <View key={i} style={tw`px-2.5 py-1 rounded-full bg-gray-100`}>
-                      <Text style={tw`text-[11px] text-gray-700`}>{i}</Text>
+                  {dish.ingredients.map((i, idx) => {
+                    const text = typeof i === 'string'
+                      ? i
+                      : `${i.name}${i.quantity ? ' ' + i.quantity : ''}`;
+                    return (
+                      <View key={`${idx}-${text}`} style={tw`px-2.5 py-1 rounded-full bg-gray-100`}>
+                        <Text style={tw`text-[11px] text-gray-700`}>{text}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : null}
+
+            {/* Tools */}
+            {dish.tools && dish.tools.length > 0 ? (
+              <View style={tw`mt-5`}>
+                <Text style={tw`text-xs font-medium text-gray-700 mb-2`}>工具</Text>
+                <View style={tw`flex-row flex-wrap gap-1.5`}>
+                  {dish.tools.map((tool) => (
+                    <View key={tool} style={tw`px-2.5 py-1 rounded-md bg-white border border-gray-200`}>
+                      <Text style={tw`text-[11px] text-gray-700`}>{tool}</Text>
                     </View>
                   ))}
                 </View>
               </View>
             ) : null}
 
-            {/* Recipe */}
-            {dish.recipe ? (
-              <View style={tw`mt-4`}>
+            {/* Prep steps */}
+            {dish.prep_steps && dish.prep_steps.length > 0 ? (
+              <View style={tw`mt-5`}>
+                <Text style={tw`text-xs font-medium text-gray-700 mb-2`}>备菜步骤</Text>
+                <View style={tw`gap-3`}>
+                  {dish.prep_steps.sort((a, b) => a.order - b.order).map((s) => (
+                    <StepRow key={`prep-${s.order}`} step={s} accent="#A68B6A" />
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
+            {/* Cook steps */}
+            {dish.cook_steps && dish.cook_steps.length > 0 ? (
+              <View style={tw`mt-5`}>
+                <Text style={tw`text-xs font-medium text-gray-700 mb-2`}>烹饪步骤</Text>
+                <View style={tw`gap-3`}>
+                  {dish.cook_steps.sort((a, b) => a.order - b.order).map((s) => (
+                    <StepRow key={`cook-${s.order}`} step={s} accent="#A68B6A" />
+                  ))}
+                </View>
+              </View>
+            ) : dish.recipe ? (
+              <View style={tw`mt-5`}>
                 <Text style={tw`text-xs font-medium text-gray-700 mb-2`}>
                   {t('chef.recipe')}
                 </Text>
@@ -237,6 +348,40 @@ export default function DishDetailScreen() {
         destructive
         loading={del.isPending}
       />
+    </View>
+  );
+}
+
+function StepRow({
+  step,
+  accent,
+}: {
+  step: { order: number; instruction: string; duration_min?: number; tip?: string };
+  accent: string;
+}) {
+  return (
+    <View style={tw`flex-row gap-3`}>
+      <View
+        style={[
+          tw`w-7 h-7 rounded-full items-center justify-center mt-0.5`,
+          { backgroundColor: accent + '22' },
+        ]}
+      >
+        <Text style={[tw`text-xs font-semibold`, { color: accent }]}>{step.order}</Text>
+      </View>
+      <View style={tw`flex-1`}>
+        <Text style={tw`text-sm text-gray-900 leading-relaxed`}>{step.instruction}</Text>
+        {step.tip ? (
+          <Text style={tw`mt-1 text-[11px] text-[#A68B6A] leading-relaxed`}>
+            💡 {step.tip}
+          </Text>
+        ) : null}
+        {step.duration_min ? (
+          <Text style={tw`mt-1 text-[10px] text-gray-500`}>
+            约 {step.duration_min} 分钟
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 }

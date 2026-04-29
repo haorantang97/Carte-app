@@ -34,15 +34,7 @@ export type Database = {
           name?: string
           sort_order?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "categories_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "menu_groups"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       dish_comments: {
         Row: {
@@ -66,22 +58,7 @@ export type Database = {
           id?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "dish_comments_dish_id_fkey"
-            columns: ["dish_id"]
-            isOneToOne: false
-            referencedRelation: "dishes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "dish_comments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       dish_likes: {
         Row: {
@@ -99,85 +76,103 @@ export type Database = {
           dish_id?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "dish_likes_dish_id_fkey"
-            columns: ["dish_id"]
-            isOneToOne: false
-            referencedRelation: "dishes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "dish_likes_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       dishes: {
         Row: {
+          calories: number | null
           category_id: string
+          cook_steps: Json | null
           created_at: string
+          cuisine: string | null
           description: string | null
+          difficulty: string | null
+          extract_error: string | null
+          extract_stage: string | null
+          extract_started_at: string | null
+          extract_status: string | null
           group_id: string
           id: string
           image_url: string | null
           ingredients: Json
           name: string
+          nutrition: Json | null
+          prep_steps: Json | null
           price: number
           recipe: string | null
           recipe_is_private: boolean
+          servings: number | null
           sort_order: number
+          source_platform: string | null
+          source_url: string | null
+          tags: Json | null
+          tools: Json | null
+          total_time_min: number | null
           updated_at: string
         }
         Insert: {
+          calories?: number | null
           category_id: string
+          cook_steps?: Json | null
           created_at?: string
+          cuisine?: string | null
           description?: string | null
+          difficulty?: string | null
+          extract_error?: string | null
+          extract_stage?: string | null
+          extract_started_at?: string | null
+          extract_status?: string | null
           group_id: string
           id?: string
           image_url?: string | null
           ingredients?: Json
           name: string
+          nutrition?: Json | null
+          prep_steps?: Json | null
           price?: number
           recipe?: string | null
           recipe_is_private?: boolean
+          servings?: number | null
           sort_order?: number
+          source_platform?: string | null
+          source_url?: string | null
+          tags?: Json | null
+          tools?: Json | null
+          total_time_min?: number | null
           updated_at?: string
         }
         Update: {
+          calories?: number | null
           category_id?: string
+          cook_steps?: Json | null
           created_at?: string
+          cuisine?: string | null
           description?: string | null
+          difficulty?: string | null
+          extract_error?: string | null
+          extract_stage?: string | null
+          extract_started_at?: string | null
+          extract_status?: string | null
           group_id?: string
           id?: string
           image_url?: string | null
           ingredients?: Json
           name?: string
+          nutrition?: Json | null
+          prep_steps?: Json | null
           price?: number
           recipe?: string | null
           recipe_is_private?: boolean
+          servings?: number | null
           sort_order?: number
+          source_platform?: string | null
+          source_url?: string | null
+          tags?: Json | null
+          tools?: Json | null
+          total_time_min?: number | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "dishes_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "dishes_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "menu_groups"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       menu_group_members: {
         Row: {
@@ -195,22 +190,7 @@ export type Database = {
           group_id?: string
           joined_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "menu_group_members_diner_id_fkey"
-            columns: ["diner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "menu_group_members_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "menu_groups"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       menu_groups: {
         Row: {
@@ -243,15 +223,7 @@ export type Database = {
           password_hash?: string | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "menu_groups_chef_id_fkey"
-            columns: ["chef_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       order_sessions: {
         Row: {
@@ -278,22 +250,7 @@ export type Database = {
           notes?: string | null
           tip?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "order_sessions_diner_id_fkey"
-            columns: ["diner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "order_sessions_menu_group_id_fkey"
-            columns: ["menu_group_id"]
-            isOneToOne: false
-            referencedRelation: "menu_groups"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       orders: {
         Row: {
@@ -332,36 +289,7 @@ export type Database = {
           status?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "orders_diner_id_fkey"
-            columns: ["diner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_dish_id_fkey"
-            columns: ["dish_id"]
-            isOneToOne: false
-            referencedRelation: "dishes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_menu_group_id_fkey"
-            columns: ["menu_group_id"]
-            isOneToOne: false
-            referencedRelation: "menu_groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "order_sessions"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -415,22 +343,7 @@ export type Database = {
           requester_id?: string
           votes?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "wishlist_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "menu_groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "wishlist_requester_id_fkey"
-            columns: ["requester_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       wishlist_votes: {
         Row: {
@@ -448,22 +361,7 @@ export type Database = {
           user_id?: string
           wishlist_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "wishlist_votes_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "wishlist_votes_wishlist_id_fkey"
-            columns: ["wishlist_id"]
-            isOneToOne: false
-            referencedRelation: "wishlist"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
@@ -481,6 +379,9 @@ export type Database = {
           is_private: boolean
         }[]
       }
+      get_apify_api_key: { Args: never; Returns: string }
+      get_gemini_api_key: { Args: never; Returns: string }
+      get_openclaw_api_key: { Args: never; Returns: string }
       is_group_chef: {
         Args: { check_group_id: string; check_user_id: string }
         Returns: boolean
@@ -494,6 +395,7 @@ export type Database = {
         Args: { check_group_id: string; pin: string }
         Returns: boolean
       }
+      sweep_stuck_extractions: { Args: never; Returns: undefined }
       toggle_wishlist_vote: {
         Args: { check_wishlist_id: string }
         Returns: boolean
@@ -593,40 +495,6 @@ export type TablesUpdate<
       }
       ? U
       : never
-    : never
-
-export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {

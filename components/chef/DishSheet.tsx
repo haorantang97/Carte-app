@@ -9,13 +9,12 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
-import { Camera, Sparkles } from 'lucide-react-native';
+import { Camera } from 'lucide-react-native';
 import { Sheet } from '@/components/ui/Sheet';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { IngredientsInput } from '@/components/chef/IngredientsInput';
 import { ImageSourceSheet } from '@/components/chef/ImageSourceSheet';
-import { SmartFillSheet } from '@/components/chef/SmartFillSheet';
 import { showToast } from '@/components/ui/Toast';
 import { useCreateDish, useUpdateDish } from '@/hooks/chef/useDishMutations';
 import { usePickAndUploadImage } from '@/hooks/storage/useImageUpload';
@@ -24,8 +23,10 @@ import type { Dish } from '@/types/domain';
 import { parsePrice } from '@/lib/price';
 import tw from '@/lib/tw';
 
-export type DishSheetMode = 'manual' | 'smart_review';
-
+// 保留这两个 type export 是为了向后兼容(chef/group/[id].tsx 还 import 着),
+// 实际运行时 mode 永远是 'manual',prefill 永远是 null。AI 路径已经走非阻塞
+// 占位卡流程,不再通过 DishSheet 预览。
+export type DishSheetMode = 'manual';
 export interface DishPrefill {
   name?: string;
   description?: string;
@@ -40,13 +41,27 @@ interface Props {
   categoryId: string | null;
   /** When set, sheet is in edit mode (existing dish) */
   dish?: Dish | null;
-  /**
-   * 'manual' = 自己填写, no AI content button at top
-   * 'smart_review' = AI 整理后预览编辑模式, AI button replaced by 重新生成
-   */
+  /** Deprecated — kept for back-compat, ignored. */
   mode?: DishSheetMode;
-  /** Initial values from upstream AI extraction (smart_review mode) */
+  /** Deprecated — kept for back-compat, ignored. */
   prefill?: DishPrefill | null;
+}
+
+/** AI 提取后 ingredients 可能是 [{name, quantity}] 形态。归一化为字符串数组用于编辑器。 */
+function normalizeIngredients(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((it) => {
+      if (typeof it === 'string') return it;
+      if (it && typeof it === 'object') {
+        const o = it as Record<string, unknown>;
+        const name = typeof o.name === 'string' ? o.name : '';
+        const qty = typeof o.quantity === 'string' ? o.quantity : '';
+        return [name, qty].filter(Boolean).join(' ');
+      }
+      return '';
+    })
+    .filter(Boolean);
 }
 
 export function DishSheet({
@@ -55,8 +70,6 @@ export function DishSheet({
   groupId,
   categoryId,
   dish,
-  mode = 'manual',
-  prefill,
 }: Props) {
   const { t } = useTranslation();
   const create = useCreateDish(groupId);
@@ -72,7 +85,6 @@ export function DishSheet({
   const [recipeIsPrivate, setRecipeIsPrivate] = useState(false);
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [smartFillOpen, setSmartFillOpen] = useState(false);
   const [imgSourceOpen, setImgSourceOpen] = useState(false);
 
   useEffect(() => {
@@ -85,18 +97,9 @@ export function DishSheet({
       setImageUrl(dish.image_url);
       setRecipe(dish.recipe ?? '');
       setRecipeIsPrivate(dish.recipe_is_private);
-      setIngredients(Array.isArray(dish.ingredients) ? (dish.ingredients as string[]) : []);
-    } else if (prefill) {
-      // New dish, prefilled by upstream AI extraction
-      setName(prefill.name ?? '');
-      setDescription(prefill.description ?? '');
-      setPriceStr('');
-      setImageUrl(null);
-      setRecipe(prefill.recipe ?? '');
-      setRecipeIsPrivate(false);
-      setIngredients(prefill.ingredients ?? []);
+      setIngredients(normalizeIngredients(dish.ingredients));
     } else {
-      // New dish, blank
+      // New manual dish
       setName('');
       setDescription('');
       setPriceStr('');
@@ -105,7 +108,7 @@ export function DishSheet({
       setRecipeIsPrivate(false);
       setIngredients([]);
     }
-  }, [visible, dish, prefill]);
+  }, [visible, dish]);
 
   const pickFromGallery = async () => {
     try {
@@ -180,8 +183,6 @@ export function DishSheet({
   };
 
   const isBusyImage = upload.isPending || generate.isPending;
-  const isCreating = !dish; // editing existing dish hides mode-specific entries
-  const showSmartReviewBanner = isCreating && mode === 'smart_review';
 
   return (
     <Sheet
@@ -191,23 +192,6 @@ export function DishSheet({
     >
       <ScrollView style={{ maxHeight: 580 }} showsVerticalScrollIndicator={false}>
         <View style={tw`gap-3 mt-1`}>
-          {/* Smart review banner: tells user this was AI-filled, offers to regenerate */}
-          {showSmartReviewBanner && (
-            <Pressable
-              onPress={() => setSmartFillOpen(true)}
-              style={({ pressed }) => [
-                tw`flex-row items-center bg-[#FAF6EE] border border-[#A68B6A] rounded-xl px-3 py-2.5`,
-                { opacity: pressed ? 0.75 : 1 },
-              ]}
-            >
-              <Sparkles size={14} color="#A68B6A" />
-              <Text style={tw`ml-1.5 flex-1 text-xs text-[#A68B6A] font-medium`}>
-                AI 已为你整理 ✓ 可继续编辑或
-              </Text>
-              <Text style={tw`text-xs text-[#A68B6A] font-semibold underline`}>重新生成</Text>
-            </Pressable>
-          )}
-
           {/* Image preview area — tap to open ImageSourceSheet (3 options) */}
           <Pressable
             onPress={() => !isBusyImage && setImgSourceOpen(true)}
@@ -295,21 +279,6 @@ export function DishSheet({
             </View>
           </View>
 
-          {/* 逃生通道:仅在 manual 新建模式下,底部提供 AI 整理入口 */}
-          {isCreating && mode === 'manual' && (
-            <Pressable
-              onPress={() => setSmartFillOpen(true)}
-              style={tw`mt-1 items-center py-1`}
-            >
-              <Text style={tw`text-[11px] text-gray-500`}>
-                不太确定怎么填?{' '}
-                <Text style={tw`text-[#A68B6A] underline font-medium`}>
-                  ✨ 让 AI 帮我整理
-                </Text>
-              </Text>
-            </Pressable>
-          )}
-
           <View style={tw`flex-row gap-2 mt-3`}>
             <View style={tw`flex-1`}>
               <Button label={t('common.cancel')} variant="outline" fullWidth onPress={onClose} />
@@ -333,26 +302,6 @@ export function DishSheet({
         onPickCamera={pickFromCamera}
         onPickAI={aiGenerate}
         aiAvailable={!!name.trim()}
-      />
-
-      <SmartFillSheet
-        visible={smartFillOpen}
-        onClose={() => setSmartFillOpen(false)}
-        onExtracted={(fields) => {
-          // Replace fields directly when invoked from smart_review banner (regenerate),
-          // but only fill empty fields when invoked from manual escape hatch.
-          if (mode === 'smart_review') {
-            setName(fields.name);
-            setDescription(fields.description);
-            setIngredients(fields.ingredients);
-            setRecipe(fields.recipe);
-          } else {
-            if (!name.trim()) setName(fields.name);
-            if (!description.trim()) setDescription(fields.description);
-            if (ingredients.length === 0) setIngredients(fields.ingredients);
-            if (!recipe.trim()) setRecipe(fields.recipe);
-          }
-        }}
       />
     </Sheet>
   );

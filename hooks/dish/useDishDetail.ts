@@ -9,7 +9,7 @@ export type DishDetail = {
   description: string | null;
   price: number;
   image_url: string | null;
-  ingredients: string[];
+  ingredients: Array<{ name: string; quantity?: string; note?: string } | string>;
   recipe: string | null;
   recipe_is_private: boolean;
   group_id: string;
@@ -20,6 +20,19 @@ export type DishDetail = {
   likes_count: number;
   liked_by_me: boolean;
   created_at: string;
+  // AI-extracted rich fields (all nullable for back-compat)
+  cuisine: string | null;
+  calories: number | null;
+  nutrition: { protein_g?: number; fat_g?: number; carbs_g?: number; fiber_g?: number } | null;
+  prep_steps: Array<{ order: number; instruction: string; duration_min?: number; tip?: string }> | null;
+  cook_steps: Array<{ order: number; instruction: string; duration_min?: number; tip?: string }> | null;
+  tools: string[] | null;
+  tags: string[] | null;
+  total_time_min: number | null;
+  servings: number | null;
+  difficulty: string | null;
+  source_platform: string | null;
+  source_url: string | null;
 };
 
 export const dishDetailKey = (dishId: string) => ['dish-detail', dishId] as const;
@@ -35,7 +48,10 @@ export function useDishDetail(dishId: string | undefined) {
       const dishRes = await supabase
         .from('dishes')
         .select(
-          `id, name, description, price, image_url, ingredients, recipe, recipe_is_private, group_id, created_at,
+          `id, name, description, price, image_url, ingredients, recipe, recipe_is_private,
+           cuisine, calories, nutrition, prep_steps, cook_steps, tools, tags,
+           total_time_min, servings, difficulty, source_platform, source_url,
+           group_id, created_at,
            menu_groups!inner (id, name, chef_id, profiles!menu_groups_chef_id_fkey!inner (id, username, avatar_url))`,
         )
         .eq('id', dishId!)
@@ -75,6 +91,18 @@ export function useDishDetail(dishId: string | undefined) {
         likes_count: allLikes?.length ?? 0,
         liked_by_me: (myLikes ?? []).length > 0,
         created_at: d.created_at,
+        cuisine: d.cuisine ?? null,
+        calories: d.calories ?? null,
+        nutrition: d.nutrition ?? null,
+        prep_steps: Array.isArray(d.prep_steps) ? d.prep_steps : null,
+        cook_steps: Array.isArray(d.cook_steps) ? d.cook_steps : null,
+        tools: Array.isArray(d.tools) ? d.tools : null,
+        tags: Array.isArray(d.tags) ? d.tags : null,
+        total_time_min: d.total_time_min ?? null,
+        servings: d.servings ?? null,
+        difficulty: d.difficulty ?? null,
+        source_platform: d.source_platform ?? null,
+        source_url: d.source_url ?? null,
       };
     },
   });

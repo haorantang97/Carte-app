@@ -15,11 +15,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { Sheet } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/Button';
 import { showToast } from '@/components/ui/Toast';
-import {
-  recipeToFormFields,
-  useExtractRecipe,
-  type ExtractedRecipe,
-} from '@/hooks/storage/useExtractRecipe';
+import { useStartExtractDish } from '@/hooks/storage/useStartExtractDish';
 import tw from '@/lib/tw';
 
 type Mode = 'text' | 'image' | 'url';
@@ -165,19 +161,22 @@ function useStageProgress(active: boolean, stages: Stage[]) {
 interface Props {
   visible: boolean;
   onClose: () => void;
-  /** Called when extraction succeeds. Caller fills DishSheet fields with these. */
-  onExtracted: (fields: {
-    name: string;
-    description: string;
-    ingredients: string[];
-    recipe: string;
-    source?: string;
-  }) => void;
+  /** Required to associate the placeholder dish with a carte + category. */
+  groupId: string;
+  categoryId: string | null;
+  /** Notify caller a placeholder dish was inserted (so it can show toast / dismiss). */
+  onStarted?: (dishId: string) => void;
 }
 
-export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
+export function SmartFillSheet({
+  visible,
+  onClose,
+  groupId,
+  categoryId,
+  onStarted,
+}: Props) {
   const { t } = useTranslation();
-  const extract = useExtractRecipe();
+  const start = useStartExtractDish();
 
   const [mode, setMode] = useState<Mode>('url');
   const [text, setText] = useState('');
@@ -196,7 +195,7 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
   };
 
   const handleClose = () => {
-    if (extract.isPending) return; // 防止生成中关闭
+    // 现在 submit 是非阻塞的,关闭无需等待
     reset();
     onClose();
   };
@@ -234,26 +233,29 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
   };
 
   const submit = async () => {
-    let payload: Parameters<typeof extract.mutateAsync>[0];
+    if (!categoryId) {
+      setLastError('请先选一个分类');
+      return;
+    }
+    let payload: Parameters<typeof start.mutateAsync>[0];
     if (mode === 'text') {
       if (!text.trim()) {
         showToast.error('请描述一下你想做什么');
         return;
       }
-      payload = { text: text.trim() };
+      payload = { groupId, categoryId, text: text.trim() };
     } else if (mode === 'image') {
       if (!imageBase64) {
         showToast.error('请先选一张图');
         return;
       }
-      payload = { imageBase64, imageMimeType: 'image/jpeg' };
+      payload = { groupId, categoryId, imageBase64, imageMimeType: 'image/jpeg' };
     } else {
       const trimmed = url.trim();
       if (!trimmed) {
         showToast.error('请贴一个链接');
         return;
       }
-      // 客户端先抽 URL 出来,失败也让 server 端再 try 一次。
       const extracted = extractUrlFromText(trimmed);
       const finalUrl = extracted ?? trimmed;
       if (!/^https?:\/\//i.test(finalUrl)) {
@@ -261,34 +263,21 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
         setLastError('没找到 http/https 开头的链接,请确认贴的内容里有完整 URL');
         return;
       }
-      payload = { url: finalUrl };
+      payload = { groupId, categoryId, url: finalUrl };
     }
 
     setLastError(null);
     try {
-      const result = await extract.mutateAsync(payload);
-      const fields = recipeToFormFields(result.recipe);
-      onExtracted({
-        ...fields,
-        source: result.source.platform || result.source.mode,
-      });
-      showToast.success('✨ 智能填充完成', `置信度: ${result.recipe.confidence}`);
+      const { dishId } = await start.mutateAsync(payload);
+      // 占位卡已 insert + cache 已刷,关闭 sheet 让用户回列表看
+      onStarted?.(dishId);
+      showToast.info('✨ 已开始生成,可继续浏览');
       reset();
       onClose();
     } catch (e: any) {
-      const msg = e?.message ?? '解析失败';
-      // Friendly error mapping
-      let displayMsg: string;
-      if (msg.includes('closed_platform')) {
-        displayMsg = '该平台无法直接解析,请截图或粘贴文字';
-      } else if (msg.includes('apify_failed')) {
-        displayMsg = `视频解析服务暂时不可用 (${msg.slice(0, 80)})`;
-      } else {
-        displayMsg = msg.slice(0, 200);
-      }
-      showToast.error(displayMsg);
-      // 同时把错误内嵌显示在 sheet 里(Toast 可能被 BottomSheet 挡住)
-      setLastError(displayMsg);
+      const msg = e?.message ?? '提交失败';
+      setLastError(msg.slice(0, 200));
+      showToast.error(msg.slice(0, 100));
     }
   };
 
@@ -309,7 +298,7 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
               <Pressable
                 key={key}
                 onPress={() => setMode(key)}
-                disabled={extract.isPending}
+                disabled={start.isPending}
                 style={tw.style(
                   'flex-1 items-center py-3 rounded-lg border',
                   active ? 'bg-gray-900 border-gray-900' : 'bg-white border-gray-200',
@@ -339,7 +328,7 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
               placeholderTextColor="#A3A3A3"
               autoCapitalize="none"
               autoCorrect={false}
-              editable={!extract.isPending}
+              editable={!start.isPending}
               multiline
               style={tw`bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 min-h-12`}
             />
@@ -380,7 +369,7 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
               placeholderTextColor="#A3A3A3"
               multiline
               numberOfLines={5}
-              editable={!extract.isPending}
+              editable={!start.isPending}
               style={tw`bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 min-h-32`}
             />
           </View>
@@ -390,7 +379,7 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
           <View>
             <Pressable
               onPress={pickImage}
-              disabled={extract.isPending}
+              disabled={start.isPending}
               style={tw`bg-gray-100 rounded-xl overflow-hidden`}
             >
               {imagePreview ? (
@@ -420,7 +409,7 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
         )}
 
         {/* Error banner — Toast 在 sheet 上方时可能被挡,这里兜底显示 */}
-        {lastError && !extract.isPending && (
+        {lastError && !start.isPending && (
           <View
             style={tw`bg-red-50 border border-red-200 rounded-lg px-3 py-2.5`}
           >
@@ -430,12 +419,12 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
           </View>
         )}
 
-        {/* Multi-stage progress (calibrated to expected path timing) */}
-        {extract.isPending && (
-          <ProgressStages
-            mode={mode}
-            url={url}
-          />
+        {/* 提交瞬间的微 spinner — 之后非阻塞,sheet 自己会关 */}
+        {start.isPending && (
+          <View style={tw`flex-row items-center gap-2 py-2`}>
+            <ActivityIndicator size="small" color="#A68B6A" />
+            <Text style={tw`text-xs text-[#A68B6A]`}>正在加入队列…</Text>
+          </View>
         )}
 
         <View style={tw`flex-row gap-2 mt-2`}>
@@ -445,14 +434,14 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
               variant="outline"
               fullWidth
               onPress={handleClose}
-              disabled={extract.isPending}
+              disabled={start.isPending}
             />
           </View>
           <View style={tw`flex-1`}>
             <Button
-              label={extract.isPending ? '生成中…' : '生成菜谱'}
+              label={start.isPending ? '生成中…' : '生成菜谱'}
               fullWidth
-              loading={extract.isPending}
+              loading={start.isPending}
               onPress={submit}
             />
           </View>

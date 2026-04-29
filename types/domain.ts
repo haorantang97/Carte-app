@@ -40,7 +40,33 @@ export type OrderStatus =
 
 export type Role = 'diner' | 'chef' | 'both';
 
-export type Ingredient = string;
+/**
+ * 食材现在支持两种形态:旧版纯字符串 ("番茄罐头 200g"),新版 AI 解析后的
+ * 结构化对象。UI 渲染时需 normalize 处理。
+ */
+export type Ingredient = string | { name: string; quantity?: string; note?: string };
+
+export type RecipeStep = {
+  order: number;
+  instruction: string;
+  duration_min?: number;
+  tip?: string;
+};
+
+export type Nutrition = {
+  protein_g?: number;
+  fat_g?: number;
+  carbs_g?: number;
+  fiber_g?: number;
+};
+
+export type ExtractStatus = 'extracting' | 'error' | null;
+export type ExtractStage =
+  | 'fetching' // 获取笔记 / 视频字幕
+  | 'parsing' // 解析内容
+  | 'integrating' // AI 整理
+  | null;
+export type Difficulty = 'easy' | 'medium' | 'hard';
 
 export type DishWithChef = Dish & {
   menu_groups: Pick<MenuGroup, 'id' | 'name' | 'is_private' | 'chef_id'> & {

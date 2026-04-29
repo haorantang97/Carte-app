@@ -25,7 +25,7 @@ export function useJoinedKitchens() {
         .select(
           `group_id, joined_at,
            menu_groups!inner (id, name, chef_id,
-             profiles!inner (id, username, avatar_url))`,
+             profiles!menu_groups_chef_id_fkey!inner (id, username, avatar_url))`,
         )
         .eq('diner_id', user!.id)
         .order('joined_at', { ascending: false });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
@@ -23,10 +23,22 @@ import tw from '@/lib/tw';
 
 export default function CarteTab() {
   const { t } = useTranslation();
-  const { data: cartes, isLoading } = useMyCartes();
+  const { data: cartes, isLoading, error: cartesError } = useMyCartes();
   const { data: profile } = useProfile();
   const del = useDeleteMenuGroup();
   const leave = useLeaveKitchen();
+
+  // Surface silent query failures (eg. PGRST201, RLS denials) so they don't
+  // look like "empty list" forever. Without this, a broken query reads as
+  // "no cartes" indistinguishable from a real empty state.
+  useEffect(() => {
+    if (cartesError) {
+      console.warn('[useMyCartes] failed', cartesError);
+      showToast.error(
+        (cartesError as Error)?.message ?? 'Failed to load cartes',
+      );
+    }
+  }, [cartesError]);
 
   const [addOpen, setAddOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);

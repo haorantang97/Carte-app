@@ -34,7 +34,7 @@ export function useMyOrders() {
         .select(
           `id, status, quantity, price_at_order, created_at, menu_group_id, dish_id,
            dishes!inner (id, name, image_url),
-           menu_groups!inner (id, name, chef_id, profiles!inner(id, username))`,
+           menu_groups!inner (id, name, chef_id, profiles!menu_groups_chef_id_fkey!inner(id, username))`,
         )
         .eq('diner_id', user!.id)
         .order('created_at', { ascending: false })

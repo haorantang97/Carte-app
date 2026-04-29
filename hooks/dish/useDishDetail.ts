@@ -36,7 +36,7 @@ export function useDishDetail(dishId: string | undefined) {
         .from('dishes')
         .select(
           `id, name, description, price, image_url, ingredients, recipe, recipe_is_private, group_id, created_at,
-           menu_groups!inner (id, name, chef_id, profiles!inner (id, username, avatar_url))`,
+           menu_groups!inner (id, name, chef_id, profiles!menu_groups_chef_id_fkey!inner (id, username, avatar_url))`,
         )
         .eq('id', dishId!)
         .single();

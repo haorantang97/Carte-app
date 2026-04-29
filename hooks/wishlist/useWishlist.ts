@@ -29,7 +29,9 @@ export function useWishlist(groupId: string | undefined) {
         supabase
           .from('wishlist')
           .select(
-            'id, content, votes, created_at, requester_id, profiles!inner(id, username, avatar_url)',
+            // wishlist <-> profiles 也是双路径(requester_id 直连 + wishlist_votes M2M),
+            // 必须指定 wishlist_requester_id_fkey 否则 PGRST201。
+            'id, content, votes, created_at, requester_id, profiles!wishlist_requester_id_fkey!inner(id, username, avatar_url)',
           )
           .eq('group_id', groupId!)
           .order('votes', { ascending: false })

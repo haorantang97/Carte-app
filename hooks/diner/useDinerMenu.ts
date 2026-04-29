@@ -45,7 +45,9 @@ export function useDinerMenu(groupId: string | undefined) {
       const [groupRes, categoriesRes, dishesRes] = await Promise.all([
         supabase
           .from('menu_groups')
-          .select('id, name, access_code, is_private, chef_id, profiles!inner(id, username, avatar_url)')
+          .select(
+            'id, name, access_code, is_private, chef_id, profiles!menu_groups_chef_id_fkey!inner(id, username, avatar_url)',
+          )
           .eq('id', groupId!)
           .single(),
         supabase

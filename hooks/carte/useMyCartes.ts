@@ -27,9 +27,14 @@ export function useMyCartes() {
       const uid = user!.id;
 
       // Cartes I created
+      // 修复:menu_groups 与 profiles 之间有两条 FK 路径(chef_id 直连 + 经
+      // menu_group_members 的 M2M),PostgREST 不能自动消歧,必须显式指定
+      // 走 menu_groups_chef_id_fkey,否则报 PGRST201。
       const ownRes = await supabase
         .from('menu_groups')
-        .select('id, name, access_code, is_private, chef_id, created_at, profiles!inner(id, username, avatar_url)')
+        .select(
+          'id, name, access_code, is_private, chef_id, created_at, profiles!menu_groups_chef_id_fkey!inner(id, username, avatar_url)',
+        )
         .eq('chef_id', uid)
         .order('created_at', { ascending: false });
       if (ownRes.error) throw ownRes.error;
@@ -39,7 +44,7 @@ export function useMyCartes() {
         .from('menu_group_members')
         .select(
           `joined_at,
-           menu_groups!inner (id, name, access_code, is_private, chef_id, profiles!inner(id, username, avatar_url))`,
+           menu_groups!inner (id, name, access_code, is_private, chef_id, profiles!menu_groups_chef_id_fkey!inner(id, username, avatar_url))`,
         )
         .eq('diner_id', uid)
         .order('joined_at', { ascending: false });

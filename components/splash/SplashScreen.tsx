@@ -23,7 +23,7 @@ export function SplashScreen({ onDone }: { onDone: () => void }) {
           entering={FadeIn.delay(100).duration(800)}
           style={[
             tw`text-gray-900`,
-            { fontFamily: 'Times New Roman', fontSize: 64, fontWeight: '400' },
+            { fontFamily: 'Fraunces_400Regular', fontSize: 64, letterSpacing: -0.5 },
           ]}
         >
           Carte

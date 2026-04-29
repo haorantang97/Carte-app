@@ -82,7 +82,12 @@ export default function CarteTab() {
     <AppContainer bottomInset={false}>
       {/* Header: title + avatar (replaces Profile tab) */}
       <View style={tw`flex-row items-end justify-between px-4 pt-2 pb-4`}>
-        <Text style={[tw`text-3xl text-gray-900`, { fontFamily: 'Times New Roman' }]}>
+        <Text
+          style={[
+            tw`text-3xl text-gray-900`,
+            { fontFamily: 'Fraunces_400Regular', letterSpacing: -0.3 },
+          ]}
+        >
           Carte
         </Text>
         <Pressable

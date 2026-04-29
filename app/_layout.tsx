@@ -1,6 +1,7 @@
 import 'react-native-gesture-handler';
 import 'react-native-url-polyfill/auto';
 import { useEffect, useState } from 'react';
+import { Text } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as ExpoSplashScreen from 'expo-splash-screen';
@@ -11,6 +12,18 @@ import { persistQueryClient } from '@tanstack/react-query-persist-client';
 import { I18nextProvider } from 'react-i18next';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import Toast from 'react-native-toast-message';
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
+import {
+  Fraunces_400Regular,
+  Fraunces_500Medium,
+  Fraunces_600SemiBold,
+} from '@expo-google-fonts/fraunces';
 import { queryClient, asyncStoragePersister } from '@/lib/queryClient';
 import { ensureSession, ensureProfile } from '@/lib/auth';
 import i18n, { initI18n } from '@/lib/i18n';
@@ -34,6 +47,31 @@ export default function RootLayout() {
   const [bootDone, setBootDone] = useState(false);
   const [splashDone, setSplashDone] = useState(false);
 
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Fraunces_400Regular,
+    Fraunces_500Medium,
+    Fraunces_600SemiBold,
+  });
+
+  // Once fonts load, set Inter as the default fontFamily for every <Text>
+  // (and TextInput, since RN routes its text through Text). Avoids touching
+  // every component while still letting individual styles override.
+  useEffect(() => {
+    if (!fontsLoaded) return;
+    const TextAny = Text as unknown as {
+      defaultProps?: { style?: unknown };
+    };
+    TextAny.defaultProps = TextAny.defaultProps ?? {};
+    TextAny.defaultProps.style = [
+      { fontFamily: 'Inter_400Regular' },
+      TextAny.defaultProps.style,
+    ];
+  }, [fontsLoaded]);
+
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -55,7 +93,7 @@ export default function RootLayout() {
     };
   }, []);
 
-  const showSplash = !bootDone || !splashDone;
+  const showSplash = !bootDone || !splashDone || !fontsLoaded;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

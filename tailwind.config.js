@@ -24,7 +24,12 @@ module.exports = {
         },
       },
       fontFamily: {
-        serif: ['Times New Roman', 'Times', 'Georgia', 'serif'],
+        // Body / UI: Inter — neutral, premium grotesque used by Linear/Stripe/Vercel.
+        sans: ['Inter_400Regular', 'system-ui', '-apple-system', 'sans-serif'],
+        // Brand / display: Fraunces — modern serif with subtle warmth, replaces
+        // the bare Times New Roman header.
+        serif: ['Fraunces_400Regular', 'Georgia', 'Times', 'serif'],
+        mono: ['Menlo', 'Courier', 'monospace'],
       },
     },
   },

@@ -1,9 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
+import { myCartesKey } from '@/hooks/carte/useMyCartes';
 import type { MenuGroup } from '@/types/domain';
 
 export const menuGroupsKey = (userId: string | undefined) => ['menu-groups', userId] as const;
+
+/**
+ * Kitchen tab reads the merged `my-cartes` cache (own + joined). Every
+ * mutation that changes menu_groups for this user must bust BOTH caches:
+ * `menu-groups` (legacy/internal) AND `my-cartes` (UI source of truth).
+ */
+function bustKeys(qc: ReturnType<typeof useQueryClient>, userId: string | undefined) {
+  qc.invalidateQueries({ queryKey: menuGroupsKey(userId) });
+  qc.invalidateQueries({ queryKey: myCartesKey(userId) });
+}
 
 export function useMenuGroups() {
   const { user } = useSession();
@@ -40,7 +51,7 @@ export function useCreateMenuGroup() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: menuGroupsKey(user?.id) }),
+    onSuccess: () => bustKeys(qc, user?.id),
   });
 }
 
@@ -59,7 +70,7 @@ export function useUpdateMenuGroup() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: menuGroupsKey(user?.id) }),
+    onSuccess: () => bustKeys(qc, user?.id),
   });
 }
 
@@ -71,7 +82,7 @@ export function useDeleteMenuGroup() {
       const { error } = await supabase.from('menu_groups').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: menuGroupsKey(user?.id) }),
+    onSuccess: () => bustKeys(qc, user?.id),
   });
 }
 
@@ -92,6 +103,6 @@ export function useSetCartePassword() {
       if (!data) throw new Error('Failed to set PIN');
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: menuGroupsKey(user?.id) }),
+    onSuccess: () => bustKeys(qc, user?.id),
   });
 }

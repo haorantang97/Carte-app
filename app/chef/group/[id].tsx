@@ -16,7 +16,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { CategorySheet } from '@/components/chef/CategorySheet';
 import { DishCard } from '@/components/chef/DishCard';
-import { DishSheet } from '@/components/chef/DishSheet';
+import { DishSheet, type DishSheetMode, type DishPrefill } from '@/components/chef/DishSheet';
+import { AddDishMethodSheet } from '@/components/chef/AddDishMethodSheet';
+import { SmartFillSheet } from '@/components/chef/SmartFillSheet';
 import { WishlistSection } from '@/components/wishlist/WishlistSection';
 import { showToast } from '@/components/ui/Toast';
 import { useChefGroupDetails } from '@/hooks/chef/useChefGroupDetails';
@@ -39,9 +41,14 @@ export default function ChefGroupDetails() {
   const [categorySheet, setCategorySheet] = useState<{ open: boolean; category: Category | null }>(
     { open: false, category: null },
   );
-  const [dishSheet, setDishSheet] = useState<{ open: boolean; dish: Dish | null }>(
-    { open: false, dish: null },
-  );
+  const [dishSheet, setDishSheet] = useState<{
+    open: boolean;
+    dish: Dish | null;
+    mode: DishSheetMode;
+    prefill: DishPrefill | null;
+  }>({ open: false, dish: null, mode: 'manual', prefill: null });
+  const [methodPickerOpen, setMethodPickerOpen] = useState(false);
+  const [smartFillStandaloneOpen, setSmartFillStandaloneOpen] = useState(false);
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
   const [deletingDish, setDeletingDish] = useState<Dish | null>(null);
 
@@ -233,7 +240,9 @@ export default function ChefGroupDetails() {
             <DishCard
               key={d.id}
               dish={d}
-              onEdit={() => setDishSheet({ open: true, dish: d })}
+              onEdit={() =>
+                setDishSheet({ open: true, dish: d, mode: 'manual', prefill: null })
+              }
               onDelete={() => setDeletingDish(d)}
             />
           ))
@@ -241,7 +250,7 @@ export default function ChefGroupDetails() {
 
         {activeCatId ? (
           <Pressable
-            onPress={() => setDishSheet({ open: true, dish: null })}
+            onPress={() => setMethodPickerOpen(true)}
             style={({ pressed }) => [
               tw`flex-row items-center justify-center bg-white border border-dashed border-gray-300 rounded-xl py-4`,
               { opacity: pressed ? 0.6 : 1 },
@@ -263,10 +272,41 @@ export default function ChefGroupDetails() {
       />
       <DishSheet
         visible={dishSheet.open}
-        onClose={() => setDishSheet({ open: false, dish: null })}
+        onClose={() => setDishSheet({ open: false, dish: null, mode: 'manual', prefill: null })}
         groupId={groupId}
         categoryId={activeCatId}
         dish={dishSheet.dish}
+        mode={dishSheet.mode}
+        prefill={dishSheet.prefill}
+      />
+
+      {/* + 添加菜品 → 弹方式选择 sheet */}
+      <AddDishMethodSheet
+        visible={methodPickerOpen}
+        onClose={() => setMethodPickerOpen(false)}
+        onPickManual={() =>
+          setDishSheet({ open: true, dish: null, mode: 'manual', prefill: null })
+        }
+        onPickSmart={() => setSmartFillStandaloneOpen(true)}
+      />
+
+      {/* AI 整理路径(独立 sheet,完成后跳到 DishSheet 预览) */}
+      <SmartFillSheet
+        visible={smartFillStandaloneOpen}
+        onClose={() => setSmartFillStandaloneOpen(false)}
+        onExtracted={(fields) =>
+          setDishSheet({
+            open: true,
+            dish: null,
+            mode: 'smart_review',
+            prefill: {
+              name: fields.name,
+              description: fields.description,
+              ingredients: fields.ingredients,
+              recipe: fields.recipe,
+            },
+          })
+        }
       />
       <ConfirmDialog
         visible={!!deletingCategory}

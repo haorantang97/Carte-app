@@ -40,7 +40,7 @@ export default function ProfileEdit() {
 
   const onPickAvatar = async () => {
     try {
-      const url = await upload.mutateAsync();
+      const url = await upload.mutateAsync('gallery');
       if (url) setAvatarUrl(url);
     } catch (e: any) {
       if (e?.message !== 'Permission denied') {

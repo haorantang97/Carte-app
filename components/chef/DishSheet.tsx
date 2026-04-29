@@ -14,24 +14,50 @@ import { Sheet } from '@/components/ui/Sheet';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { IngredientsInput } from '@/components/chef/IngredientsInput';
+import { ImageSourceSheet } from '@/components/chef/ImageSourceSheet';
+import { SmartFillSheet } from '@/components/chef/SmartFillSheet';
 import { showToast } from '@/components/ui/Toast';
 import { useCreateDish, useUpdateDish } from '@/hooks/chef/useDishMutations';
 import { usePickAndUploadImage } from '@/hooks/storage/useImageUpload';
 import { useGenerateDishImage } from '@/hooks/storage/useGenerateDishImage';
-import { SmartFillSheet } from '@/components/chef/SmartFillSheet';
 import type { Dish } from '@/types/domain';
 import { parsePrice } from '@/lib/price';
 import tw from '@/lib/tw';
+
+export type DishSheetMode = 'manual' | 'smart_review';
+
+export interface DishPrefill {
+  name?: string;
+  description?: string;
+  ingredients?: string[];
+  recipe?: string;
+}
 
 interface Props {
   visible: boolean;
   onClose: () => void;
   groupId: string;
   categoryId: string | null;
+  /** When set, sheet is in edit mode (existing dish) */
   dish?: Dish | null;
+  /**
+   * 'manual' = 自己填写, no AI content button at top
+   * 'smart_review' = AI 整理后预览编辑模式, AI button replaced by 重新生成
+   */
+  mode?: DishSheetMode;
+  /** Initial values from upstream AI extraction (smart_review mode) */
+  prefill?: DishPrefill | null;
 }
 
-export function DishSheet({ visible, onClose, groupId, categoryId, dish }: Props) {
+export function DishSheet({
+  visible,
+  onClose,
+  groupId,
+  categoryId,
+  dish,
+  mode = 'manual',
+  prefill,
+}: Props) {
   const { t } = useTranslation();
   const create = useCreateDish(groupId);
   const update = useUpdateDish(groupId);
@@ -47,10 +73,12 @@ export function DishSheet({ visible, onClose, groupId, categoryId, dish }: Props
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [smartFillOpen, setSmartFillOpen] = useState(false);
+  const [imgSourceOpen, setImgSourceOpen] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
     if (dish) {
+      // Editing an existing dish — load from DB
       setName(dish.name);
       setDescription(dish.description ?? '');
       setPriceStr(String(dish.price ?? ''));
@@ -58,7 +86,17 @@ export function DishSheet({ visible, onClose, groupId, categoryId, dish }: Props
       setRecipe(dish.recipe ?? '');
       setRecipeIsPrivate(dish.recipe_is_private);
       setIngredients(Array.isArray(dish.ingredients) ? (dish.ingredients as string[]) : []);
+    } else if (prefill) {
+      // New dish, prefilled by upstream AI extraction
+      setName(prefill.name ?? '');
+      setDescription(prefill.description ?? '');
+      setPriceStr('');
+      setImageUrl(null);
+      setRecipe(prefill.recipe ?? '');
+      setRecipeIsPrivate(false);
+      setIngredients(prefill.ingredients ?? []);
     } else {
+      // New dish, blank
       setName('');
       setDescription('');
       setPriceStr('');
@@ -67,15 +105,26 @@ export function DishSheet({ visible, onClose, groupId, categoryId, dish }: Props
       setRecipeIsPrivate(false);
       setIngredients([]);
     }
-  }, [visible, dish]);
+  }, [visible, dish, prefill]);
 
-  const pickImage = async () => {
+  const pickFromGallery = async () => {
     try {
-      const url = await upload.mutateAsync();
+      const url = await upload.mutateAsync('gallery');
       if (url) setImageUrl(url);
     } catch (e: any) {
-      if (e?.message !== 'Permission denied') {
+      if (!String(e?.message ?? '').includes('Permission')) {
         showToast.error(e?.message ?? 'Failed to upload');
+      }
+    }
+  };
+
+  const pickFromCamera = async () => {
+    try {
+      const url = await upload.mutateAsync('camera');
+      if (url) setImageUrl(url);
+    } catch (e: any) {
+      if (!String(e?.message ?? '').includes('Permission')) {
+        showToast.error(e?.message ?? 'Failed to take photo');
       }
     }
   };
@@ -131,6 +180,8 @@ export function DishSheet({ visible, onClose, groupId, categoryId, dish }: Props
   };
 
   const isBusyImage = upload.isPending || generate.isPending;
+  const isCreating = !dish; // editing existing dish hides mode-specific entries
+  const showSmartReviewBanner = isCreating && mode === 'smart_review';
 
   return (
     <Sheet
@@ -138,26 +189,28 @@ export function DishSheet({ visible, onClose, groupId, categoryId, dish }: Props
       onClose={onClose}
       title={dish ? t('chef.editDish') : t('chef.addDish')}
     >
-      <ScrollView style={{ maxHeight: 560 }} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ maxHeight: 580 }} showsVerticalScrollIndicator={false}>
         <View style={tw`gap-3 mt-1`}>
-          {/* ✨ 智能填充入口(链接 / 文字 / 图片三选一,Gemini 抽食谱)*/}
-          <Pressable
-            onPress={() => setSmartFillOpen(true)}
-            disabled={isBusyImage}
-            style={({ pressed }) => [
-              tw`flex-row items-center justify-center bg-[#FAF6EE] border border-[#A68B6A] rounded-xl py-3`,
-              { opacity: isBusyImage ? 0.4 : pressed ? 0.75 : 1 },
-            ]}
-          >
-            <Sparkles size={14} color="#A68B6A" />
-            <Text style={tw`ml-1.5 text-xs font-semibold text-[#A68B6A]`}>
-              ✨ 智能填充菜品(链接 / 文字 / 图片)
-            </Text>
-          </Pressable>
+          {/* Smart review banner: tells user this was AI-filled, offers to regenerate */}
+          {showSmartReviewBanner && (
+            <Pressable
+              onPress={() => setSmartFillOpen(true)}
+              style={({ pressed }) => [
+                tw`flex-row items-center bg-[#FAF6EE] border border-[#A68B6A] rounded-xl px-3 py-2.5`,
+                { opacity: pressed ? 0.75 : 1 },
+              ]}
+            >
+              <Sparkles size={14} color="#A68B6A" />
+              <Text style={tw`ml-1.5 flex-1 text-xs text-[#A68B6A] font-medium`}>
+                AI 已为你整理 ✓ 可继续编辑或
+              </Text>
+              <Text style={tw`text-xs text-[#A68B6A] font-semibold underline`}>重新生成</Text>
+            </Pressable>
+          )}
 
-          {/* Image preview area */}
+          {/* Image preview area — tap to open ImageSourceSheet (3 options) */}
           <Pressable
-            onPress={pickImage}
+            onPress={() => !isBusyImage && setImgSourceOpen(true)}
             disabled={isBusyImage}
             style={tw`bg-gray-100 rounded-xl overflow-hidden`}
           >
@@ -183,48 +236,13 @@ export function DishSheet({ visible, onClose, groupId, categoryId, dish }: Props
                   <>
                     <Camera size={20} color="#737373" />
                     <Text style={tw`mt-1 text-xs text-gray-500`}>
-                      {t('chef.imageUrl')}
+                      点击上传 / 拍照 / AI 生图
                     </Text>
                   </>
                 )}
               </View>
             )}
           </Pressable>
-
-          {/* Image action row: 上传 + ✨AI */}
-          <View style={tw`flex-row gap-2`}>
-            <Pressable
-              onPress={pickImage}
-              disabled={isBusyImage}
-              style={({ pressed }) => [
-                tw`flex-1 flex-row items-center justify-center bg-white border border-gray-200 rounded-lg py-2.5`,
-                { opacity: isBusyImage ? 0.4 : pressed ? 0.7 : 1 },
-              ]}
-            >
-              <Camera size={14} color="#404040" />
-              <Text style={tw`ml-1.5 text-xs font-medium text-gray-700`}>上传</Text>
-            </Pressable>
-            <Pressable
-              onPress={aiGenerate}
-              disabled={isBusyImage}
-              style={({ pressed }) => [
-                tw`flex-1 flex-row items-center justify-center rounded-lg py-2.5`,
-                {
-                  backgroundColor: '#A68B6A',
-                  opacity: isBusyImage ? 0.4 : pressed ? 0.75 : 1,
-                },
-              ]}
-            >
-              {generate.isPending ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <>
-                  <Sparkles size={14} color="white" />
-                  <Text style={tw`ml-1.5 text-xs font-medium text-white`}>AI 生图</Text>
-                </>
-              )}
-            </Pressable>
-          </View>
 
           <Input
             label={t('chef.dishName')}
@@ -277,6 +295,21 @@ export function DishSheet({ visible, onClose, groupId, categoryId, dish }: Props
             </View>
           </View>
 
+          {/* 逃生通道:仅在 manual 新建模式下,底部提供 AI 整理入口 */}
+          {isCreating && mode === 'manual' && (
+            <Pressable
+              onPress={() => setSmartFillOpen(true)}
+              style={tw`mt-1 items-center py-1`}
+            >
+              <Text style={tw`text-[11px] text-gray-500`}>
+                不太确定怎么填?{' '}
+                <Text style={tw`text-[#A68B6A] underline font-medium`}>
+                  ✨ 让 AI 帮我整理
+                </Text>
+              </Text>
+            </Pressable>
+          )}
+
           <View style={tw`flex-row gap-2 mt-3`}>
             <View style={tw`flex-1`}>
               <Button label={t('common.cancel')} variant="outline" fullWidth onPress={onClose} />
@@ -293,15 +326,32 @@ export function DishSheet({ visible, onClose, groupId, categoryId, dish }: Props
         </View>
       </ScrollView>
 
+      <ImageSourceSheet
+        visible={imgSourceOpen}
+        onClose={() => setImgSourceOpen(false)}
+        onPickGallery={pickFromGallery}
+        onPickCamera={pickFromCamera}
+        onPickAI={aiGenerate}
+        aiAvailable={!!name.trim()}
+      />
+
       <SmartFillSheet
         visible={smartFillOpen}
         onClose={() => setSmartFillOpen(false)}
         onExtracted={(fields) => {
-          // Only fill empty fields, never override user-edited content
-          if (!name.trim()) setName(fields.name);
-          if (!description.trim()) setDescription(fields.description);
-          if (ingredients.length === 0) setIngredients(fields.ingredients);
-          if (!recipe.trim()) setRecipe(fields.recipe);
+          // Replace fields directly when invoked from smart_review banner (regenerate),
+          // but only fill empty fields when invoked from manual escape hatch.
+          if (mode === 'smart_review') {
+            setName(fields.name);
+            setDescription(fields.description);
+            setIngredients(fields.ingredients);
+            setRecipe(fields.recipe);
+          } else {
+            if (!name.trim()) setName(fields.name);
+            if (!description.trim()) setDescription(fields.description);
+            if (ingredients.length === 0) setIngredients(fields.ingredients);
+            if (!recipe.trim()) setRecipe(fields.recipe);
+          }
         }}
       />
     </Sheet>

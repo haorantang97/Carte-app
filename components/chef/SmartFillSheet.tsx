@@ -24,6 +24,16 @@ import tw from '@/lib/tw';
 
 type Mode = 'text' | 'image' | 'url';
 
+/**
+ * 用户经常粘贴整段分享文案 (小红书 "...复制后直接打开【小红书】..."、
+ * 抖音 "7.79 复制打开抖音" 等),URL 嵌在自然语言里。
+ * Edge function 端也做了同样的兜底,这里只是给用户即时反馈。
+ */
+function extractUrlFromText(input: string): string | null {
+  const m = input.match(/https?:\/\/[^\s)】」"',。、]+/i);
+  return m ? m[0].replace(/[.,;!?]+$/, '') : null;
+}
+
 interface Props {
   visible: boolean;
   onClose: () => void;
@@ -110,11 +120,20 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
       }
       payload = { imageBase64, imageMimeType: 'image/jpeg' };
     } else {
-      if (!url.trim()) {
+      const trimmed = url.trim();
+      if (!trimmed) {
         showToast.error('请贴一个链接');
         return;
       }
-      payload = { url: url.trim() };
+      // 客户端先抽 URL 出来,失败也让 server 端再 try 一次。
+      const extracted = extractUrlFromText(trimmed);
+      const finalUrl = extracted ?? trimmed;
+      if (!/^https?:\/\//i.test(finalUrl)) {
+        showToast.error('没找到 http/https 开头的链接');
+        setLastError('没找到 http/https 开头的链接,请确认贴的内容里有完整 URL');
+        return;
+      }
+      payload = { url: finalUrl };
     }
 
     setLastError(null);
@@ -188,13 +207,34 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
             <TextInput
               value={url}
               onChangeText={setUrl}
-              placeholder="https://...(YouTube / 抖音 / 小红书 / IG / B站 ...)"
+              placeholder="贴整段分享文案也可以,自动识别 URL"
               placeholderTextColor="#A3A3A3"
               autoCapitalize="none"
               autoCorrect={false}
               editable={!extract.isPending}
-              style={tw`bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900`}
+              multiline
+              style={tw`bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 min-h-12`}
             />
+            {(() => {
+              const trimmed = url.trim();
+              if (!trimmed) return null;
+              const extracted = extractUrlFromText(trimmed);
+              if (extracted && extracted !== trimmed) {
+                return (
+                  <Text style={tw`text-[11px] text-emerald-700`}>
+                    ✓ 识别到链接: {extracted}
+                  </Text>
+                );
+              }
+              if (!extracted && !/^https?:\/\//i.test(trimmed)) {
+                return (
+                  <Text style={tw`text-[11px] text-red-600`}>
+                    没在文本里找到 http/https 开头的链接
+                  </Text>
+                );
+              }
+              return null;
+            })()}
             <Text style={tw`text-[11px] text-gray-500 leading-relaxed`}>
               支持:YouTube / B站 / 抖音 / 小红书 / TikTok / Instagram / Facebook /
               快手 / 微博 / 知乎 / Allrecipes / 下厨房 等几十个平台。视频会自动提取字幕,

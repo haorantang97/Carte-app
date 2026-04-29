@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { readEdgeError } from '@/lib/edgeError';
 
 export interface GenerateInput {
   name: string;
@@ -39,7 +40,8 @@ export function useGenerateDishImage() {
       );
 
       if (error) {
-        throw new Error(error.message ?? 'Edge function failed');
+        const real = await readEdgeError(error);
+        throw new Error(real);
       }
       if (!data?.url) {
         throw new Error('No image URL returned');

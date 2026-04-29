@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { readEdgeError } from '@/lib/edgeError';
 
 export interface RecipeIngredient {
   name: string;
@@ -70,7 +71,11 @@ export function useExtractRecipe() {
           },
         },
       );
-      if (error) throw new Error(error.message ?? 'Edge function failed');
+      if (error) {
+        // 真正的错误信息在 error.context (Response body),不是 error.message
+        const real = await readEdgeError(error);
+        throw new Error(real);
+      }
       if (!data?.recipe) throw new Error('No recipe in response');
       return data;
     },

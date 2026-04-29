@@ -46,6 +46,7 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
   const [url, setUrl] = useState('');
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
 
   const reset = () => {
     setMode('url');
@@ -53,6 +54,7 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
     setUrl('');
     setImageBase64(null);
     setImagePreview(null);
+    setLastError(null);
   };
 
   const handleClose = () => {
@@ -115,6 +117,7 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
       payload = { url: url.trim() };
     }
 
+    setLastError(null);
     try {
       const result = await extract.mutateAsync(payload);
       const fields = recipeToFormFields(result.recipe);
@@ -128,13 +131,17 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
     } catch (e: any) {
       const msg = e?.message ?? '解析失败';
       // Friendly error mapping
+      let displayMsg: string;
       if (msg.includes('closed_platform')) {
-        showToast.error('该平台无法直接解析,请截图或粘贴文字');
+        displayMsg = '该平台无法直接解析,请截图或粘贴文字';
       } else if (msg.includes('apify_failed')) {
-        showToast.error('视频解析服务暂时不可用,请稍后再试');
+        displayMsg = `视频解析服务暂时不可用 (${msg.slice(0, 80)})`;
       } else {
-        showToast.error(msg.slice(0, 100));
+        displayMsg = msg.slice(0, 200);
       }
+      showToast.error(displayMsg);
+      // 同时把错误内嵌显示在 sheet 里(Toast 可能被 BottomSheet 挡住)
+      setLastError(displayMsg);
     }
   };
 
@@ -241,6 +248,17 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
                 </View>
               )}
             </Pressable>
+          </View>
+        )}
+
+        {/* Error banner — Toast 在 sheet 上方时可能被挡,这里兜底显示 */}
+        {lastError && !extract.isPending && (
+          <View
+            style={tw`bg-red-50 border border-red-200 rounded-lg px-3 py-2.5`}
+          >
+            <Text style={tw`text-xs text-red-700 leading-relaxed`}>
+              {lastError}
+            </Text>
           </View>
         )}
 

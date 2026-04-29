@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -32,6 +32,134 @@ type Mode = 'text' | 'image' | 'url';
 function extractUrlFromText(input: string): string | null {
   const m = input.match(/https?:\/\/[^\s)】」"',。、]+/i);
   return m ? m[0].replace(/[.,;!?]+$/, '') : null;
+}
+
+/**
+ * 根据 URL host 推测走哪条路径 → 决定阶段提示。
+ * 这只是 UX 层的"假进度",真实状态由 edge function 内部决定。
+ */
+type Path = 'youtube' | 'apify_video' | 'apify_note' | 'recipe_html' | 'html_text' | 'unknown';
+
+function guessPathFromUrl(rawUrl: string): Path {
+  const url = extractUrlFromText(rawUrl) ?? rawUrl;
+  const host = (() => {
+    try {
+      return new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+    } catch {
+      return '';
+    }
+  })();
+  if (/youtube\.com|youtu\.be/.test(host)) return 'youtube';
+  if (/douyin|tiktok|bilibili|b23\.tv|kuaishou|fb\.watch|nicovideo|dailymotion/.test(host)) {
+    return 'apify_video';
+  }
+  if (/xiaohongshu|xhslink|instagram|threads|pinterest|pin\.it|weibo|reddit|twitter|x\.com|facebook/.test(host)) {
+    return 'apify_note';
+  }
+  if (
+    /allrecipes|cookpad|kurashiru|xiachufang|meishij|marmiton|giallozafferano|seriouseats|foodnetwork|nytimes|bonappetit|10000recipe|icook|food\.com|tarladalal|tudogostoso/.test(
+      host,
+    )
+  ) {
+    return 'recipe_html';
+  }
+  if (/zhihu|medium|substack/.test(host)) return 'html_text';
+  return 'unknown';
+}
+
+interface Stage {
+  /** Seconds elapsed at which this stage activates */
+  at: number;
+  label: string;
+}
+
+function stagesFor(path: Path, mode: Mode): Stage[] {
+  if (mode === 'text') {
+    return [
+      { at: 0, label: '理解你的描述…' },
+      { at: 3, label: 'AI 生成菜谱…' },
+      { at: 10, label: '快好了…' },
+    ];
+  }
+  if (mode === 'image') {
+    return [
+      { at: 0, label: '上传图片…' },
+      { at: 3, label: 'AI 看图识菜…' },
+      { at: 12, label: '生成做法步骤…' },
+      { at: 25, label: '快好了…' },
+    ];
+  }
+  // URL mode — 按路径不同
+  switch (path) {
+    case 'youtube':
+      return [
+        { at: 0, label: '提交给 Gemini…' },
+        { at: 4, label: 'AI 看视频中…' },
+        { at: 20, label: '提取菜谱要点…' },
+        { at: 40, label: '快好了…' },
+      ];
+    case 'apify_video':
+      return [
+        { at: 0, label: '解析短链接…' },
+        { at: 3, label: '排队抓取视频字幕…' },
+        { at: 25, label: '提取字幕中…' },
+        { at: 60, label: 'AI 整理菜谱…' },
+        { at: 95, label: '快好了…' },
+      ];
+    case 'apify_note':
+      return [
+        { at: 0, label: '解析短链接…' },
+        { at: 3, label: '排队抓取笔记…' },
+        { at: 20, label: '提取图文内容…' },
+        { at: 50, label: 'AI 整理菜谱…' },
+        { at: 90, label: '快好了…' },
+      ];
+    case 'recipe_html':
+      return [
+        { at: 0, label: '下载页面…' },
+        { at: 3, label: '解析菜谱结构…' },
+        { at: 8, label: 'AI 整理…' },
+        { at: 18, label: '快好了…' },
+      ];
+    case 'html_text':
+      return [
+        { at: 0, label: '下载文章…' },
+        { at: 3, label: '提取正文…' },
+        { at: 8, label: 'AI 整理…' },
+        { at: 18, label: '快好了…' },
+      ];
+    default:
+      return [
+        { at: 0, label: '正在打开链接…' },
+        { at: 5, label: '抓取内容中…' },
+        { at: 30, label: 'AI 整理…' },
+        { at: 60, label: '快好了…' },
+      ];
+  }
+}
+
+function useStageProgress(active: boolean, stages: Stage[]) {
+  const [elapsed, setElapsed] = useState(0);
+  const start = useRef<number | null>(null);
+  useEffect(() => {
+    if (!active) {
+      start.current = null;
+      setElapsed(0);
+      return;
+    }
+    start.current = Date.now();
+    const id = setInterval(() => {
+      if (start.current) setElapsed(Math.floor((Date.now() - start.current) / 1000));
+    }, 500);
+    return () => clearInterval(id);
+  }, [active]);
+  // 找到 elapsed >= at 的最大那个
+  let current = stages[0];
+  for (const s of stages) {
+    if (elapsed >= s.at) current = s;
+    else break;
+  }
+  return { elapsed, current };
 }
 
 interface Props {
@@ -302,18 +430,12 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
           </View>
         )}
 
-        {/* Status hint */}
+        {/* Multi-stage progress (calibrated to expected path timing) */}
         {extract.isPending && (
-          <View style={tw`flex-row items-center justify-center gap-2 py-2`}>
-            <ActivityIndicator size="small" color="#A68B6A" />
-            <Text style={tw`text-xs text-[#A68B6A]`}>
-              {mode === 'url'
-                ? '解析链接中…(10-90 秒,视频较慢)'
-                : mode === 'image'
-                  ? 'AI 识图中…(10-30 秒)'
-                  : 'AI 整理中…(5-15 秒)'}
-            </Text>
-          </View>
+          <ProgressStages
+            mode={mode}
+            url={url}
+          />
         )}
 
         <View style={tw`flex-row gap-2 mt-2`}>
@@ -337,5 +459,63 @@ export function SmartFillSheet({ visible, onClose, onExtracted }: Props) {
         </View>
       </View>
     </Sheet>
+  );
+}
+
+// =============================================================================
+// ProgressStages — 进度阶段提示
+// =============================================================================
+
+function ProgressStages({ mode, url }: { mode: Mode; url: string }) {
+  const path = mode === 'url' ? guessPathFromUrl(url) : 'unknown';
+  const stages = stagesFor(path, mode);
+  const { elapsed, current } = useStageProgress(true, stages);
+
+  // 找到当前阶段在 stages 里的 index 用于高亮已完成项
+  const currentIdx = stages.findIndex((s) => s.label === current.label);
+
+  return (
+    <View style={tw`bg-[#FAF6EE] border border-[#E8DEC8] rounded-lg px-3 py-3 gap-2`}>
+      <View style={tw`flex-row items-center gap-2`}>
+        <ActivityIndicator size="small" color="#A68B6A" />
+        <Text style={tw`text-xs font-medium text-[#A68B6A] flex-1`}>
+          {current.label}
+        </Text>
+        <Text style={tw`text-[10px] text-gray-500`}>{elapsed}s</Text>
+      </View>
+
+      {/* 阶段列表 — 已完成 ✓,当前 →,未到 · */}
+      <View style={tw`gap-1 mt-1`}>
+        {stages.map((s, i) => {
+          const done = i < currentIdx;
+          const active = i === currentIdx;
+          const upcoming = i > currentIdx;
+          return (
+            <View key={i} style={tw`flex-row items-center gap-2`}>
+              <Text
+                style={tw.style(
+                  'text-[10px] w-3',
+                  done ? 'text-emerald-600' : active ? 'text-[#A68B6A]' : 'text-gray-300',
+                )}
+              >
+                {done ? '✓' : active ? '→' : '·'}
+              </Text>
+              <Text
+                style={tw.style(
+                  'text-[11px] flex-1',
+                  done
+                    ? 'text-gray-500 line-through'
+                    : active
+                      ? 'text-gray-900 font-medium'
+                      : 'text-gray-400',
+                )}
+              >
+                {s.label}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
   );
 }

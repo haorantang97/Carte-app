@@ -11,6 +11,9 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { CarteCard } from '@/components/carte/CarteCard';
 import { AddCarteSheet } from '@/components/carte/AddCarteSheet';
 import { MenuGroupSheet } from '@/components/chef/MenuGroupSheet';
+import { PendingOrdersCard } from '@/components/chef/PendingOrdersCard';
+import { WeeklyWishlistCard } from '@/components/chef/WeeklyWishlistCard';
+import { RecentCommentsCard } from '@/components/chef/RecentCommentsCard';
 import { JoinKitchenSheet } from '@/components/diner/JoinKitchenSheet';
 import { UsernamePrompt } from '@/components/onboarding/UsernamePrompt';
 import { useMyCartes, type MyCarte } from '@/hooks/carte/useMyCartes';
@@ -116,6 +119,15 @@ export default function CarteTab() {
       </View>
 
       <ScrollView contentContainerStyle={tw`px-4 pb-32`}>
+        {/* 待制作订单卡片 — 仅在有 pending/preparing 订单时显示 */}
+        <PendingOrdersCard />
+
+        {/* 本周愿望榜 — 聚合所有 group 的 wishlist,过去 7 天 */}
+        <WeeklyWishlistCard />
+
+        {/* 最新反馈 — 聚合所有 dish 的最新评论(排除 chef 自己) */}
+        <RecentCommentsCard />
+
         {isLoading ? (
           <View style={tw`pt-20`}>
             <ActivityIndicator size="small" color="#737373" />

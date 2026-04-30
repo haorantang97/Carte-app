@@ -17,35 +17,52 @@ interface Props {
   onRetry?: () => void;
 }
 
+// 阶段化进度条:每个 stage 占进度条的一段范围,在该段内基于 elapsed 推进。
+// 这样 stage 切换时进度条跳一段(用户感知"在动"),stage 内部缓慢推进。
 const STAGE_LABELS: Record<string, string> = {
-  fetching: '正在获取笔记数据',
-  parsing: '解析内容',
-  integrating: '正在提取菜谱',
+  fetching: '抓取链接内容',
+  extracted: '已抓到数据,准备 AI 整理',
+  integrating: 'AI 正在整理菜谱',
+};
+// stage → [progress 区间起点, 区间终点, 该阶段预期耗时秒数]
+const STAGE_PROGRESS: Record<string, [number, number, number]> = {
+  fetching: [5, 50, 30],
+  extracted: [50, 60, 5],
+  integrating: [60, 95, 60],
 };
 
 function ExtractingCard({
   dish,
   onDelete,
-  startedAt,
 }: {
   dish: Dish;
   onDelete: () => void;
-  startedAt: number;
 }) {
-  // 跑一个秒级更新让进度条 / 文案能动起来
+  const stage = dish.extract_stage ?? 'fetching';
+  // stage 切换时重置该阶段起始时间(用 dish.updated_at 推 stage 切换点)
+  const stageStartedAt = useRef<number>(Date.now());
+  const lastStage = useRef<string>(stage);
+  if (lastStage.current !== stage) {
+    stageStartedAt.current = Date.now();
+    lastStage.current = stage;
+  }
+
+  // 跑一个秒级更新让进度条平滑推进
   const [, force] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => force((n) => n + 1), 1000);
+    const id = setInterval(() => force((n) => n + 1), 500);
     return () => clearInterval(id);
   }, []);
 
-  const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-  const stageLabel =
-    STAGE_LABELS[dish.extract_stage ?? ''] ??
-    (elapsed < 5 ? '等待中…' : '正在处理…');
-
-  // 假进度条:基于 elapsed,90s 走到 90%,之后慢慢逼近 95%
-  const fakeProgress = Math.min(95, (elapsed / 90) * 90);
+  const stageLabel = STAGE_LABELS[stage] ?? '正在处理…';
+  const [start, target, duration] = STAGE_PROGRESS[stage] ?? [5, 95, 60];
+  const stageElapsed = (Date.now() - stageStartedAt.current) / 1000;
+  // 在 stage 内从 start 平滑推到 target,耗时 duration 走完;超时也不超过 target
+  const progress = Math.min(
+    target,
+    start + (stageElapsed / duration) * (target - start),
+  );
+  const progressInt = Math.floor(progress);
 
   return (
     <View style={tw`bg-gray-100 border border-gray-200 rounded-xl overflow-hidden`}>
@@ -74,14 +91,13 @@ function ExtractingCard({
           >
             {stageLabel}
           </Text>
-          <Text style={tw`text-[10px] text-gray-500`}>{elapsed}s</Text>
+          <Text style={tw`text-[10px] text-gray-500 font-medium`}>{progressInt}%</Text>
         </View>
-        {/* 进度条 */}
         <View style={tw`h-1 bg-gray-200 rounded-full overflow-hidden`}>
           <View
             style={[
               tw`h-full bg-[#A68B6A] rounded-full`,
-              { width: `${fakeProgress}%` },
+              { width: `${progress}%` },
             ]}
           />
         </View>
@@ -158,10 +174,7 @@ export function DishCard({ dish, onEdit, onDelete, onRetry }: Props) {
 
   // Extracting state — non-interactive (no detail nav, no edit)
   if (dish.extract_status === 'extracting') {
-    const startedAt = dish.extract_started_at
-      ? new Date(dish.extract_started_at).getTime()
-      : Date.now();
-    return <ExtractingCard dish={dish} onDelete={onDelete} startedAt={startedAt} />;
+    return <ExtractingCard dish={dish} onDelete={onDelete} />;
   }
 
   // Error state

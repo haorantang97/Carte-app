@@ -6,9 +6,9 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Pencil, Plus, Trash2 } from 'lucide-react-native';
+import { Eye, Pencil, Plus, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { AppContainer } from '@/components/ui/AppContainer';
 import { BackButton } from '@/components/ui/BackButton';
@@ -18,7 +18,9 @@ import { CategorySheet } from '@/components/chef/CategorySheet';
 import { DishCard } from '@/components/chef/DishCard';
 import { DishSheet, type DishSheetMode, type DishPrefill } from '@/components/chef/DishSheet';
 import { AddDishMethodSheet } from '@/components/chef/AddDishMethodSheet';
+import { AILimitSheet } from '@/components/chef/AILimitSheet';
 import { SmartFillSheet } from '@/components/chef/SmartFillSheet';
+import { useAiQuota } from '@/hooks/useAiQuota';
 import { WishlistSection } from '@/components/wishlist/WishlistSection';
 import { showToast } from '@/components/ui/Toast';
 import { useChefGroupDetails } from '@/hooks/chef/useChefGroupDetails';
@@ -59,6 +61,8 @@ export default function ChefGroupDetails() {
   }>({ open: false, dish: null, mode: 'manual', prefill: null });
   const [methodPickerOpen, setMethodPickerOpen] = useState(false);
   const [smartFillStandaloneOpen, setSmartFillStandaloneOpen] = useState(false);
+  const [aiLimitOpen, setAiLimitOpen] = useState(false);
+  const aiQuota = useAiQuota();
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
   const [deletingDish, setDeletingDish] = useState<Dish | null>(null);
 
@@ -127,6 +131,23 @@ export default function ChefGroupDetails() {
         <Text style={tw`flex-1 ml-2 text-xl font-semibold text-gray-900`} numberOfLines={1}>
           {data.group.name}
         </Text>
+        <Pressable
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => {});
+            router.push({
+              pathname: '/diner/group/[id]',
+              params: { id: groupId, preview: '1' },
+            } as any);
+          }}
+          hitSlop={6}
+          style={({ pressed }) => [
+            tw`flex-row items-center px-2.5 py-1.5 rounded-full border border-gray-300`,
+            { opacity: pressed ? 0.7 : 1 },
+          ]}
+        >
+          <Eye size={13} color="#171717" strokeWidth={1.5} />
+          <Text style={tw`ml-1 text-xs text-gray-900`}>预览</Text>
+        </Pressable>
       </View>
 
       {/* Code row */}
@@ -304,7 +325,18 @@ export default function ChefGroupDetails() {
         onPickManual={() =>
           setDishSheet({ open: true, dish: null, mode: 'manual', prefill: null })
         }
-        onPickSmart={() => setSmartFillStandaloneOpen(true)}
+        onPickSmart={() => {
+          if (aiQuota.isExceeded) setAiLimitOpen(true);
+          else setSmartFillStandaloneOpen(true);
+        }}
+      />
+
+      <AILimitSheet
+        visible={aiLimitOpen}
+        onClose={() => setAiLimitOpen(false)}
+        onPickManual={() =>
+          setDishSheet({ open: true, dish: null, mode: 'manual', prefill: null })
+        }
       />
 
       {/* AI 整理路径:非阻塞 — 提交后立刻关闭,占位卡通过 realtime 推到列表 */}

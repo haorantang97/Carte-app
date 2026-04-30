@@ -9,9 +9,9 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Heart, User } from 'lucide-react-native';
+import { ChefHat, Heart, Share2, User } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppContainer } from '@/components/ui/AppContainer';
@@ -20,6 +20,11 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { CommentList } from '@/components/dish/CommentList';
 import { CommentComposer } from '@/components/dish/CommentComposer';
+import {
+  HighlightedStepText,
+  type IngredientLike,
+} from '@/components/dish/HighlightedStepText';
+import { IngredientSheet } from '@/components/dish/IngredientSheet';
 import { showToast } from '@/components/ui/Toast';
 import { useDishDetail } from '@/hooks/dish/useDishDetail';
 import { useToggleDishLike } from '@/hooks/dish/useDishLikes';
@@ -30,6 +35,8 @@ import {
 } from '@/hooks/dish/useDishComments';
 import { useSession } from '@/hooks/auth/useSession';
 import { formatPrice } from '@/lib/price';
+import { shareDish } from '@/lib/share';
+import { scaleQuantity } from '@/lib/units';
 import tw from '@/lib/tw';
 
 export default function DishDetailScreen() {
@@ -45,6 +52,13 @@ export default function DishDetailScreen() {
   const del = useDeleteComment(dishId);
 
   const [pendingDelete, setPendingDelete] = useState<DishCommentRow | null>(null);
+  const [selectedIngredient, setSelectedIngredient] = useState<IngredientLike | null>(null);
+
+  // 份量缩放:基准为 dish.servings(若缺失默认 2);user 可上下调,食材数字按比例 scale。
+  const baseServings = dish?.servings ?? 2;
+  const [servingsAdjust, setServingsAdjust] = useState<number | null>(null);
+  const servings = servingsAdjust ?? baseServings;
+  const ratio = baseServings > 0 ? servings / baseServings : 1;
 
   const onLike = () => {
     if (!dish) return;
@@ -94,27 +108,45 @@ export default function DishDetailScreen() {
         ]}
       >
         <BackButton />
-        <Pressable
-          onPress={onLike}
-          hitSlop={8}
-          style={tw`flex-row items-center px-3 py-2 rounded-full bg-white/90 border border-gray-200`}
-        >
-          <Heart
-            size={16}
-            color={dish.liked_by_me ? '#A68B6A' : '#737373'}
-            fill={dish.liked_by_me ? '#A68B6A' : 'transparent'}
-          />
-          {dish.likes_count > 0 ? (
-            <Text
-              style={tw.style(
-                'ml-1.5 text-xs font-medium',
-                dish.liked_by_me ? 'text-[#A68B6A]' : 'text-gray-700',
-              )}
-            >
-              {dish.likes_count}
-            </Text>
-          ) : null}
-        </Pressable>
+        <View style={tw`flex-row items-center gap-2`}>
+          <Pressable
+            onPress={onLike}
+            hitSlop={8}
+            style={tw`flex-row items-center px-3 py-2 rounded-full bg-white/90 border border-gray-200`}
+          >
+            <Heart
+              size={16}
+              color={dish.liked_by_me ? '#A68B6A' : '#737373'}
+              fill={dish.liked_by_me ? '#A68B6A' : 'transparent'}
+            />
+            {dish.likes_count > 0 ? (
+              <Text
+                style={tw.style(
+                  'ml-1.5 text-xs font-medium',
+                  dish.liked_by_me ? 'text-[#A68B6A]' : 'text-gray-700',
+                )}
+              >
+                {dish.likes_count}
+              </Text>
+            ) : null}
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              Haptics.selectionAsync().catch(() => {});
+              shareDish({
+                id: dish.id,
+                name: dish.name,
+                description: dish.description,
+                chef_username: dish.chef_username,
+                group_name: dish.group_name,
+              });
+            }}
+            hitSlop={8}
+            style={tw`p-2 rounded-full bg-white/90 border border-gray-200`}
+          >
+            <Share2 size={16} color="#737373" />
+          </Pressable>
+        </View>
       </View>
 
       <KeyboardAvoidingView
@@ -247,17 +279,51 @@ export default function DishDetailScreen() {
               </View>
             ) : null}
 
-            {/* Ingredients */}
+            {/* Ingredients (含份量调整) */}
             {dish.ingredients.length > 0 ? (
               <View style={tw`mt-5`}>
-                <Text style={tw`text-xs font-medium text-gray-700 mb-2`}>
-                  {t('chef.ingredients')}
-                </Text>
+                <View style={tw`flex-row items-center justify-between mb-2`}>
+                  <Text style={tw`text-xs font-medium text-gray-700`}>
+                    {t('chef.ingredients')}
+                  </Text>
+                  {/* Servings stepper — 可调节,数字按比例缩放 */}
+                  <View style={tw`flex-row items-center gap-2`}>
+                    <Pressable
+                      onPress={() => {
+                        Haptics.selectionAsync().catch(() => {});
+                        setServingsAdjust(Math.max(1, servings - 1));
+                      }}
+                      hitSlop={8}
+                      style={tw`w-6 h-6 rounded-full bg-gray-100 items-center justify-center`}
+                    >
+                      <Text style={tw`text-sm text-gray-700 leading-none`}>−</Text>
+                    </Pressable>
+                    <Text style={tw`text-xs font-medium text-gray-900 min-w-12 text-center`}>
+                      {servings} 人份
+                    </Text>
+                    <Pressable
+                      onPress={() => {
+                        Haptics.selectionAsync().catch(() => {});
+                        setServingsAdjust(Math.min(20, servings + 1));
+                      }}
+                      hitSlop={8}
+                      style={tw`w-6 h-6 rounded-full bg-gray-100 items-center justify-center`}
+                    >
+                      <Text style={tw`text-sm text-gray-700 leading-none`}>+</Text>
+                    </Pressable>
+                  </View>
+                </View>
+                {servings !== baseServings ? (
+                  <Text style={tw`text-[10px] text-[#A68B6A] mb-2`}>
+                    已按 {servings}/{baseServings} 比例调整食材用量
+                  </Text>
+                ) : null}
                 <View style={tw`flex-row flex-wrap gap-1.5`}>
                   {dish.ingredients.map((i, idx) => {
-                    const text = typeof i === 'string'
-                      ? i
-                      : `${i.name}${i.quantity ? ' ' + i.quantity : ''}`;
+                    const name = typeof i === 'string' ? i : i.name;
+                    const qtyRaw = typeof i === 'string' ? '' : (i.quantity ?? '');
+                    const qty = scaleQuantity(qtyRaw, ratio);
+                    const text = qty ? `${name} ${qty}` : name;
                     return (
                       <View key={`${idx}-${text}`} style={tw`px-2.5 py-1 rounded-full bg-gray-100`}>
                         <Text style={tw`text-[11px] text-gray-700`}>{text}</Text>
@@ -282,13 +348,33 @@ export default function DishDetailScreen() {
               </View>
             ) : null}
 
+            {/* "开始做菜" CTA — 仅在有 prep 或 cook 步骤时显示 */}
+            {((dish.prep_steps?.length ?? 0) + (dish.cook_steps?.length ?? 0)) > 0 ? (
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  router.push(`/cook/${dish.id}`);
+                }}
+                style={tw`mt-5 flex-row items-center justify-center gap-2 py-3.5 rounded-xl bg-[#A68B6A]`}
+              >
+                <ChefHat size={18} color="white" />
+                <Text style={tw`text-sm font-medium text-white`}>开始做菜</Text>
+              </Pressable>
+            ) : null}
+
             {/* Prep steps */}
             {dish.prep_steps && dish.prep_steps.length > 0 ? (
               <View style={tw`mt-5`}>
                 <Text style={tw`text-xs font-medium text-gray-700 mb-2`}>备菜步骤</Text>
                 <View style={tw`gap-3`}>
                   {dish.prep_steps.sort((a, b) => a.order - b.order).map((s) => (
-                    <StepRow key={`prep-${s.order}`} step={s} accent="#A68B6A" />
+                    <StepRow
+                      key={`prep-${s.order}`}
+                      step={s}
+                      accent="#A68B6A"
+                      ingredients={dish.ingredients}
+                      onIngredientPress={setSelectedIngredient}
+                    />
                   ))}
                 </View>
               </View>
@@ -300,7 +386,13 @@ export default function DishDetailScreen() {
                 <Text style={tw`text-xs font-medium text-gray-700 mb-2`}>烹饪步骤</Text>
                 <View style={tw`gap-3`}>
                   {dish.cook_steps.sort((a, b) => a.order - b.order).map((s) => (
-                    <StepRow key={`cook-${s.order}`} step={s} accent="#A68B6A" />
+                    <StepRow
+                      key={`cook-${s.order}`}
+                      step={s}
+                      accent="#A68B6A"
+                      ingredients={dish.ingredients}
+                      onIngredientPress={setSelectedIngredient}
+                    />
                   ))}
                 </View>
               </View>
@@ -348,6 +440,18 @@ export default function DishDetailScreen() {
         destructive
         loading={del.isPending}
       />
+
+      {/* Ingredient detail sheet — 步骤里点击食材 token 时弹出 */}
+      <IngredientSheet
+        visible={!!selectedIngredient}
+        onClose={() => setSelectedIngredient(null)}
+        ingredient={selectedIngredient}
+        scaledQuantity={
+          selectedIngredient?.quantity
+            ? scaleQuantity(selectedIngredient.quantity, ratio)
+            : undefined
+        }
+      />
     </View>
   );
 }
@@ -355,9 +459,13 @@ export default function DishDetailScreen() {
 function StepRow({
   step,
   accent,
+  ingredients,
+  onIngredientPress,
 }: {
   step: { order: number; instruction: string; duration_min?: number; tip?: string };
   accent: string;
+  ingredients?: Array<string | IngredientLike>;
+  onIngredientPress?: (ing: IngredientLike) => void;
 }) {
   return (
     <View style={tw`flex-row gap-3`}>
@@ -370,7 +478,15 @@ function StepRow({
         <Text style={[tw`text-xs font-semibold`, { color: accent }]}>{step.order}</Text>
       </View>
       <View style={tw`flex-1`}>
-        <Text style={tw`text-sm text-gray-900 leading-relaxed`}>{step.instruction}</Text>
+        {ingredients && ingredients.length > 0 ? (
+          <HighlightedStepText
+            text={step.instruction}
+            ingredients={ingredients}
+            onIngredientPress={onIngredientPress}
+          />
+        ) : (
+          <Text style={tw`text-sm text-gray-900 leading-relaxed`}>{step.instruction}</Text>
+        )}
         {step.tip ? (
           <Text style={tw`mt-1 text-[11px] text-[#A68B6A] leading-relaxed`}>
             💡 {step.tip}
@@ -385,3 +501,4 @@ function StepRow({
     </View>
   );
 }
+

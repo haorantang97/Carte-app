@@ -18,8 +18,9 @@ import { showToast } from '@/components/ui/Toast';
 import tw from '@/lib/tw';
 
 export default function DinerGroupDetails() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, preview } = useLocalSearchParams<{ id: string; preview?: string }>();
   const groupId = id!;
+  const isPreview = preview === '1';
   const { t } = useTranslation();
   const { data, isLoading, error } = useDinerMenu(groupId);
   const cart = useCart();
@@ -82,6 +83,12 @@ export default function DinerGroupDetails() {
           {group.name}
         </Text>
       </View>
+
+      {isPreview ? (
+        <View style={tw`mx-4 mb-2 px-3 py-1.5 border border-dashed border-gray-400 rounded-md items-center`}>
+          <Text style={tw`text-xs text-gray-500`}>👁 以 diner 视角预览 · 返回回到编辑</Text>
+        </View>
+      ) : null}
 
       {/* Chef header card */}
       <View style={tw`px-4 pb-3`}>

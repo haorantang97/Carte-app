@@ -61,6 +61,68 @@ by Supabase Postgres + Auth + Storage + Realtime.
 - `expo-router` Stack.Screen names are paths, not arbitrary IDs. If a
   route file moves, update `app/_layout.tsx` accordingly.
 
+## AI extraction — Apify actor selection (mandatory flow)
+
+`extract-recipe` edge function uses ~20 Apify actors to scrape social and
+recipe URLs. A 2026-04-30 audit found **14 of 19 actors had wrong inputs
+or were the wrong actor type entirely**. Root cause: actors were chosen by
+name and description, never actually tested.
+
+Any change to or addition of an actor MUST follow this flow.
+
+1. **Fetch the real input schema** (do not guess from the name):
+   ```bash
+   curl 'https://api.apify.com/v2/acts/<owner>~<name>/builds/default?token=<APIFY_KEY>' \
+     | jq -r '.data.inputSchema | fromjson | {required, props: (.properties|keys)}'
+   ```
+
+2. **Confirm the actor type matches our use case** — we always want
+   "URL in → single post's content out". If the `required` field is
+   `username` / `usernames` / `query` / `queries`, the actor scrapes by
+   user or by search keyword. **Wrong tool. Find a different actor.**
+
+3. **Get a sample URL** — prefer the schema's `example` field; otherwise
+   a real public URL on that platform. `'TODO'` placeholders are not
+   allowed to ship.
+
+4. **Run the actor once via the API** with your candidate `buildInput`:
+   ```bash
+   curl -X POST 'https://api.apify.com/v2/acts/<owner>~<name>/run-sync-get-dataset-items?token=<APIFY_KEY>&timeout=90' \
+     -H 'Content-Type: application/json' \
+     -d '<your buildInput output>'
+   ```
+   Counts as passing only if the response is a non-empty array with the
+   target fields (title / body / images).
+
+5. **Schema defaults are NOT applied in API mode.** Apify only applies
+   them in the UI. **Always pass `proxyConfiguration` explicitly.** Chinese
+   platforms (xiaohongshu, douyin, bilibili, weibo, kuaishou) basically
+   all need `{ useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'] }`
+   or they get blocked.
+
+6. **Register in the `APIFY_ACTORS` dict** in
+   `supabase/functions/extract-recipe/index.ts`. Every entry must fill
+   `buildInput` / `schemaDoc` / `sampleUrl` / `verified`. Set
+   `verified: true` ONLY after step 4 passes.
+
+### Known anti-scrape patterns
+
+- **URL path variants** — one platform can have multiple URL shapes
+  (xiaohongshu `/discovery/item/<id>` vs `/explore/<id>`). Actors with
+  internal URL-parser bugs hang on certain shapes. Normalize in
+  `buildInput`.
+- **Access tokens in query string** — `xsec_token` (xiaohongshu) and
+  similar must survive through `followRedirect`. Don't strip query strings.
+- **Short link expansion** — `followRedirect()` uses `GET` + iOS UA +
+  `redirect: 'follow'`. Don't switch to `HEAD` (many short-link services
+  return 404 to HEAD).
+
+### Adding a new platform
+
+1. Add `ROUTES['<host>']` (and any short-link hosts to `SHORT_LINKS`).
+2. Add `APIFY_ACTORS['<actor-id>']` following steps 1–6 above.
+3. Deploy and have the user test a real URL before considering it done.
+
 ## Schema reminders
 
 - `menu_groups.is_private` is the **single source of truth** for privacy.

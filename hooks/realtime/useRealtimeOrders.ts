@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import * as Notifications from 'expo-notifications';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
 import { chefOrdersKey } from '@/hooks/chef/useChefOrders';
@@ -9,9 +10,11 @@ import i18n from '@/lib/i18n';
 
 /**
  * Chef-side realtime: when a new order INSERTs into a menu_group I own,
- * play the haptic, toast, and invalidate the orders query.
+ * play the haptic, toast, invalidate the orders query, and push a local
+ * notification(在 app 后台仍活着时也能瞄到锁屏)。
  *
- * 修复:原版 channel 命名简单可能多用户冲突;新版统一带 user_id 后缀。
+ * 限制:RN 后台久了 socket 会断 → 真"灭屏推送"要服务端 APNs。本地通知只兜
+ * "app 还在但没在前台"那段。
  */
 export function useRealtimeOrders(menuGroupIds: string[]) {
   const qc = useQueryClient();
@@ -33,6 +36,15 @@ export function useRealtimeOrders(menuGroupIds: string[]) {
           playOrderNotification();
           showToast.info(i18n.t('orders.newOrderReceived'));
           qc.invalidateQueries({ queryKey: chefOrdersKey(user.id) });
+          // 本地通知 — app 在后台时仍能看到
+          Notifications.scheduleNotificationAsync({
+            content: {
+              title: '🍳 新订单',
+              body: i18n.t('orders.newOrderReceived'),
+              sound: 'default',
+            },
+            trigger: null, // 立即推送
+          }).catch(() => {});
         },
       )
       .subscribe();

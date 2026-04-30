@@ -82,8 +82,8 @@
     "deleteMenuGroupConfirm": "确定删除「{{name}}」吗?这将同时删除所有分类和菜品。",
     "deleteDish": "删除菜品",
     "deleteDishConfirm": "确定删除「{{name}}」吗?此操作不可撤销。",
-    "activeOrders": "活跃订单",
-    "noActiveOrders": "没有活跃订单",
+    "activeOrders": "后厨",
+    "noActiveOrders": "暂无活跃订单",
     "shoppingList": "购物清单",
     "wishlist": "愿望清单",
     "editMode": "编辑"

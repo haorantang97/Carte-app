@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
-import { Camera, User } from 'lucide-react-native';
+import { Camera, Sparkles, User } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { AppContainer } from '@/components/ui/AppContainer';
 import { BackButton } from '@/components/ui/BackButton';
@@ -19,6 +19,8 @@ import { Input } from '@/components/ui/Input';
 import { showToast } from '@/components/ui/Toast';
 import { useProfile, useUpdateProfile } from '@/hooks/auth/useProfile';
 import { usePickAndUploadImage } from '@/hooks/storage/useImageUpload';
+import { useAiQuota } from '@/hooks/useAiQuota';
+import { SketchBox, SketchPill } from '@/components/ui/sketch';
 import tw from '@/lib/tw';
 
 export default function ProfileEdit() {
@@ -26,6 +28,8 @@ export default function ProfileEdit() {
   const { data: profile, isLoading } = useProfile();
   const update = useUpdateProfile();
   const upload = usePickAndUploadImage('avatars', { square: true });
+  const ai = useAiQuota();
+  const aiPct = Math.min(100, Math.round((ai.used / ai.limit) * 100));
 
   const [username, setUsername] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -130,6 +134,41 @@ export default function ProfileEdit() {
               maxLength={30}
               autoCapitalize="none"
             />
+          </View>
+
+          {/* AI 用量 — atmospheric, no on-card noise; full detail lives here. */}
+          <View style={tw`mt-7`}>
+            <Text style={tw`text-base text-gray-900 mb-2`}>AI 用量</Text>
+            <SketchBox seed={11} radius={14} style={tw`p-4`}>
+              <View style={tw`flex-row items-center justify-between`}>
+                <View style={tw`flex-row items-center`}>
+                  <Sparkles size={16} color="#171717" strokeWidth={1.5} />
+                  <Text style={tw`ml-2 text-base text-gray-900`}>本月已用</Text>
+                </View>
+                <Text style={tw`text-xl text-gray-900`}>
+                  <Text style={tw`font-bold`}>{ai.used}</Text>
+                  <Text style={tw`text-gray-400`}> / {ai.limit}</Text>
+                </Text>
+              </View>
+              {/* progress */}
+              <View style={tw`mt-3 h-1.5 rounded-full bg-gray-100 overflow-hidden`}>
+                <View
+                  style={[tw`h-full bg-gray-900 rounded-full`, { width: `${aiPct}%` }]}
+                />
+              </View>
+              <Pressable
+                onPress={() => showToast.info('升级 Pro 即将上线')}
+                style={({ pressed }) => [
+                  tw`mt-3 flex-row items-center justify-between`,
+                  { opacity: pressed ? 0.7 : 1 },
+                ]}
+              >
+                <Text style={tw`text-xs text-gray-500`}>升级 Pro 解除上限</Text>
+                <SketchPill seed={13} style={{ paddingTop: 2, paddingBottom: 2 }}>
+                  <Text style={tw`text-xs font-bold text-gray-900`}>Pro →</Text>
+                </SketchPill>
+              </Pressable>
+            </SketchBox>
           </View>
         </ScrollView>
 

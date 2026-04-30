@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import 'react-native-url-polyfill/auto';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Text } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -29,6 +29,8 @@ import { ensureSession, ensureProfile } from '@/lib/auth';
 import i18n, { initI18n } from '@/lib/i18n';
 import { SplashScreen } from '@/components/splash/SplashScreen';
 import { useRealtimeOrderStatus } from '@/hooks/realtime/useRealtimeOrderStatus';
+import { useRealtimeOrders } from '@/hooks/realtime/useRealtimeOrders';
+import { useChefOrders } from '@/hooks/chef/useChefOrders';
 
 ExpoSplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -40,6 +42,21 @@ persistQueryClient({
 
 function RealtimeBridge() {
   useRealtimeOrderStatus();
+  return null;
+}
+
+/**
+ * Chef-side realtime bridge — 永远活跃。订阅 chef 的所有 menu_group 新订单,
+ * 推 toast + 本地通知 + invalidate cache。这样 chef 在任何 tab(kitchen/orders/...)
+ * 都能即时收到新订单。
+ */
+function ChefRealtimeBridge() {
+  const { data: orders } = useChefOrders();
+  const groupIds = useMemo(
+    () => Array.from(new Set((orders ?? []).map((o) => o.menu_group_id))),
+    [orders],
+  );
+  useRealtimeOrders(groupIds);
   return null;
 }
 
@@ -110,6 +127,7 @@ export default function RootLayout() {
                 <Stack.Screen name="profile/edit" />
               </Stack>
               <RealtimeBridge />
+              <ChefRealtimeBridge />
               {showSplash && <SplashScreen onDone={() => setSplashDone(true)} />}
               <StatusBar style="dark" />
               <Toast />

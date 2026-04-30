@@ -82,7 +82,7 @@
     "deleteMenuGroupConfirm": "Delete \"{{name}}\"? This will also delete all categories and dishes.",
     "deleteDish": "Delete Dish",
     "deleteDishConfirm": "Delete \"{{name}}\"? This cannot be undone.",
-    "activeOrders": "Active Orders",
+    "activeOrders": "Studio",
     "noActiveOrders": "No active orders",
     "shoppingList": "Shopping List",
     "wishlist": "Wishlist",

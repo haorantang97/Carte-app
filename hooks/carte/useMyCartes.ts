@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
+import { myCartesKey } from '@/lib/cacheKeys';
 
 /** Unified Carte item — covers both "I'm the chef" and "I joined as diner". */
 export type MyCarte = {
@@ -15,8 +16,6 @@ export type MyCarte = {
   /** Most recent timestamp to sort the merged list by */
   pinned_at: string;
 };
-
-export const myCartesKey = (userId: string | undefined) => ['my-cartes', userId] as const;
 
 export function useMyCartes() {
   const { user } = useSession();

@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
-import { dishDetailKey, type DishDetail } from '@/hooks/dish/useDishDetail';
+import { dishDetailKey } from '@/lib/cacheKeys';
+import { type DishDetail } from '@/hooks/dish/useDishDetail';
 
 /**
  * Toggle a like, optimistically updating the dish-detail cache.

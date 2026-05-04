@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
-import { chefOrdersKey } from '@/hooks/chef/useChefOrders';
+import { chefOrdersKey } from '@/lib/cacheKeys';
 import { playOrderNotification } from '@/lib/notification-sound';
 import { showToast } from '@/components/ui/Toast';
 import i18n from '@/lib/i18n';

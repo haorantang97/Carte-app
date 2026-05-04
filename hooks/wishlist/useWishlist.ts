@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
-import { cacheBus } from '@/lib/cacheKeys';
+import { cacheBus, wishlistKey } from '@/lib/cacheKeys';
 
 export type WishlistRow = {
   id: string;
@@ -14,8 +14,6 @@ export type WishlistRow = {
   requester_avatar_url: string | null;
   voted_by_me: boolean;
 };
-
-export const wishlistKey = (groupId: string) => ['wishlist', groupId] as const;
 
 export function useWishlist(groupId: string | undefined) {
   const qc = useQueryClient();

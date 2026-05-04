@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
+import { joinedKitchensKey } from '@/lib/cacheKeys';
 
 export type JoinedKitchen = {
   groupId: string;
@@ -10,9 +11,6 @@ export type JoinedKitchen = {
   chefUsername: string;
   chefAvatarUrl: string | null;
 };
-
-export const joinedKitchensKey = (userId: string | undefined) =>
-  ['joined-kitchens', userId] as const;
 
 export function useJoinedKitchens() {
   const { user } = useSession();

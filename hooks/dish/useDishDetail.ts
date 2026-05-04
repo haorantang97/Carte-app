@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
+import { dishDetailKey } from '@/lib/cacheKeys';
 
 export type DishDetail = {
   id: string;
@@ -34,8 +35,6 @@ export type DishDetail = {
   source_platform: string | null;
   source_url: string | null;
 };
-
-export const dishDetailKey = (dishId: string) => ['dish-detail', dishId] as const;
 
 export function useDishDetail(dishId: string | undefined) {
   const { user } = useSession();

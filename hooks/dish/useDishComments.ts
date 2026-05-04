@@ -13,8 +13,6 @@ export type DishCommentRow = {
   avatar_url: string | null;
 };
 
-export { dishCommentsKey };
-
 export function useDishComments(dishId: string | undefined) {
   const qc = useQueryClient();
   const { user } = useSession();

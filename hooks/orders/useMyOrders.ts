@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
+import { myOrdersKey } from '@/lib/cacheKeys';
 import type { OrderStatus } from '@/types/domain';
 
 /**
@@ -20,8 +21,6 @@ export type MyOrderRow = {
   group_name: string;
   chef_username: string;
 };
-
-export const myOrdersKey = (userId: string | undefined) => ['my-orders', userId] as const;
 
 export function useMyOrders() {
   const { user } = useSession();

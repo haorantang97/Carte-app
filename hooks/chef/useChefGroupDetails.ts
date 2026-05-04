@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Category, Dish, MenuGroup } from '@/types/domain';
-
-export const chefGroupKey = (groupId: string) => ['chef-group', groupId] as const;
+import { chefGroupKey } from '@/lib/cacheKeys';
 
 export interface ChefGroupBundle {
   group: MenuGroup;

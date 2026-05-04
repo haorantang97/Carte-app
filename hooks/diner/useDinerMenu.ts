@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { dinerMenuKey } from '@/lib/cacheKeys';
 
 export interface DinerMenuChef {
   id: string;
@@ -33,8 +34,6 @@ export interface DinerDish {
   total_time_min: number | null;
   calories: number | null;
 }
-
-export const dinerMenuKey = (groupId: string) => ['diner-menu', groupId] as const;
 
 export function useDinerMenu(groupId: string | undefined) {
   return useQuery({

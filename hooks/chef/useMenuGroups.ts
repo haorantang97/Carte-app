@@ -4,8 +4,6 @@ import { useSession } from '@/hooks/auth/useSession';
 import { cacheBus, menuGroupsKey } from '@/lib/cacheKeys';
 import type { MenuGroup } from '@/types/domain';
 
-export { menuGroupsKey };
-
 export function useMenuGroups() {
   const { user } = useSession();
   return useQuery({

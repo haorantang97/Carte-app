@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/hooks/auth/useSession';
-import { cacheBus } from '@/lib/cacheKeys';
+import { cacheBus, chefOrdersKey } from '@/lib/cacheKeys';
 import type { OrderStatus } from '@/types/domain';
 
 export type ChefOrderRow = {
@@ -30,9 +30,6 @@ export function nextStatus(s: OrderStatus): OrderStatus | null {
   if (idx < 0 || idx >= STATUS_FLOW.length - 1) return null;
   return STATUS_FLOW[idx + 1];
 }
-
-export const chefOrdersKey = (userId: string | undefined) =>
-  ['chef-orders', userId] as const;
 
 export function useChefOrders() {
   const { user } = useSession();

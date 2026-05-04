@@ -1,52 +1,51 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useKeepAwake } from 'expo-keep-awake';
 import * as Speech from 'expo-speech';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Timer,
-  Volume2,
-  VolumeX,
-  X,
-} from 'lucide-react-native';
+import { Timer, Volume2, VolumeX, X } from 'lucide-react-native';
+
+import { Tappable } from '@/components/ui/Tappable';
 import { useDishDetail } from '@/hooks/dish/useDishDetail';
 import {
   HighlightedStepText,
   type IngredientLike,
 } from '@/components/dish/HighlightedStepText';
 import { IngredientSheet } from '@/components/dish/IngredientSheet';
-import tw from '@/lib/tw';
+import { SketchBox, SketchCircle } from '@/components/ui/sketch';
+import { palette, handFont, noteFont, titleFont } from '@/lib/palette';
+import { useResponsive } from '@/lib/responsive';
 
-/**
- * 烹饪模式 — 沉浸式步骤引导(屏幕常亮 + 大字步骤 + 食材高亮 + 计时器 + TTS 朗读)。
- * 不打 LiveActivity(原生模块成本高),计时归零用本地通知兜底。
- */
 export default function CookingScreen() {
   useKeepAwake();
-  const { dishId } = useLocalSearchParams<{ dishId: string }>();
   const insets = useSafeAreaInsets();
+  const r = useResponsive();
+  const contentPadH = r.isTablet
+    ? Math.max(28, (r.width - r.contentMaxWidth) / 2)
+    : r.scale(20, { min: 14, max: 28 });
+  const { dishId } = useLocalSearchParams<{ dishId: string }>();
   const { data: dish, isLoading } = useDishDetail(dishId!);
 
   const [stepIndex, setStepIndex] = useState(0);
   const [ttsOn, setTtsOn] = useState(true);
   const [timerEndsAt, setTimerEndsAt] = useState<number | null>(null);
   const [, force] = useState(0);
-  const [selectedIngredient, setSelectedIngredient] = useState<IngredientLike | null>(null);
+  const [selectedIngredient, setSelectedIngredient] = useState<IngredientLike | null>(
+    null,
+  );
 
-  // prep + cook 合并成一条线性序列
   const steps = useMemo(() => {
-    if (!dish) return [] as Array<{
-      kind: 'prep' | 'cook';
-      order: number;
-      instruction: string;
-      duration_min?: number;
-      tip?: string;
-    }>;
+    if (!dish)
+      return [] as Array<{
+        kind: 'prep' | 'cook';
+        order: number;
+        instruction: string;
+        duration_min?: number;
+        tip?: string;
+      }>;
     const prep = (dish.prep_steps ?? [])
       .slice()
       .sort((a, b) => a.order - b.order)
@@ -61,21 +60,16 @@ export default function CookingScreen() {
   const currentStep = steps[stepIndex];
   const total = steps.length;
 
-  // 切到新步骤:重置 timer + 朗读
   useEffect(() => {
     if (!currentStep) return;
     setTimerEndsAt(null);
     if (ttsOn) {
       Speech.stop();
-      Speech.speak(currentStep.instruction, {
-        language: 'zh-CN',
-        rate: 0.95,
-      });
+      Speech.speak(currentStep.instruction, { language: 'zh-CN', rate: 0.95 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIndex]);
 
-  // 离开页面时停止朗读 + 取消所有 pending 通知
   useEffect(() => {
     return () => {
       Speech.stop();
@@ -83,14 +77,12 @@ export default function CookingScreen() {
     };
   }, []);
 
-  // 计时 tick
   useEffect(() => {
     if (timerEndsAt === null) return;
     const id = setInterval(() => force((n) => n + 1), 500);
     return () => clearInterval(id);
   }, [timerEndsAt]);
 
-  // 切换 TTS 时,如果开启,立即朗读当前步骤
   useEffect(() => {
     if (!currentStep) return;
     if (ttsOn) {
@@ -103,24 +95,55 @@ export default function CookingScreen() {
 
   if (isLoading || !dish) {
     return (
-      <View style={tw`flex-1 bg-white items-center justify-center`}>
-        <Text style={tw`text-sm text-gray-500`}>加载中…</Text>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: palette.paper,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text style={{ fontFamily: handFont, fontSize: 18, color: palette.inkSoft }}>
+          加载中…
+        </Text>
       </View>
     );
   }
 
   if (steps.length === 0) {
     return (
-      <View style={tw`flex-1 bg-white items-center justify-center px-6`}>
-        <Text style={tw`text-base text-gray-700 text-center leading-relaxed`}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: palette.paper,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 24,
+        }}
+      >
+        <Text
+          style={{
+            fontFamily: handFont,
+            fontSize: 22,
+            color: palette.inkSoft,
+            textAlign: 'center',
+            lineHeight: 28,
+          }}
+        >
           这道菜还没有可做的步骤
         </Text>
-        <Pressable
-          onPress={() => router.back()}
-          style={tw`mt-4 px-4 py-2 bg-gray-900 rounded-full`}
-        >
-          <Text style={tw`text-white text-sm`}>返回</Text>
-        </Pressable>
+        <Tappable feedback="press" onPress={() => router.back()}>
+          <SketchBox
+            radius={999}
+            seed={1}
+            fillColor={palette.paper}
+            style={{ marginTop: 16, paddingHorizontal: 24, paddingVertical: 8 }}
+          >
+            <Text style={{ fontFamily: handFont, fontSize: 18, color: palette.ink }}>
+              返回
+            </Text>
+          </SketchBox>
+        </Tappable>
       </View>
     );
   }
@@ -129,7 +152,6 @@ export default function CookingScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const ends = Date.now() + mins * 60 * 1000;
     setTimerEndsAt(ends);
-    // 安排归零本地通知,即使 app 进后台或锁屏也能响
     try {
       const perm = await Notifications.getPermissionsAsync();
       if (!perm.granted) {
@@ -145,7 +167,7 @@ export default function CookingScreen() {
         trigger: { seconds: Math.max(1, mins * 60), channelId: 'default' } as any,
       });
     } catch {
-      // 通知权限 / 调度失败时静默,前台计时仍能用
+      // silent
     }
   };
 
@@ -164,7 +186,9 @@ export default function CookingScreen() {
   const goNext = () => {
     Haptics.selectionAsync().catch(() => {});
     if (stepIndex >= total - 1) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+        () => {},
+      );
       router.back();
       return;
     }
@@ -174,100 +198,208 @@ export default function CookingScreen() {
   const remainingSec = timerEndsAt
     ? Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000))
     : 0;
-  const remainingFmt = `${Math.floor(remainingSec / 60)}:${String(remainingSec % 60).padStart(2, '0')}`;
+  const remainingFmt = `${Math.floor(remainingSec / 60)}:${String(
+    remainingSec % 60,
+  ).padStart(2, '0')}`;
 
   return (
     <View
-      style={[
-        tw`flex-1 bg-white`,
-        { paddingTop: insets.top, paddingBottom: insets.bottom },
-      ]}
+      style={{
+        flex: 1,
+        backgroundColor: palette.paper,
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
+      }}
     >
       {/* Top bar */}
-      <View style={tw`flex-row items-center justify-between px-3 py-2`}>
-        <Pressable onPress={() => router.back()} hitSlop={10} style={tw`p-2`}>
-          <X size={22} color="#404040" />
-        </Pressable>
+      <View
+        style={{
+          paddingHorizontal: contentPadH,
+          paddingTop: 12,
+          paddingBottom: 12,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <Tappable feedback="press" onPress={() => router.back()}>
+          <SketchCircle size={r.scale(40, { min: 36, max: 48 })} seed={1}>
+            <X size={18} color={palette.ink} strokeWidth={1.5} />
+          </SketchCircle>
+        </Tappable>
         <Text
-          style={tw`flex-1 text-center text-sm font-medium text-gray-900 px-2`}
+          style={{
+            flex: 1,
+            textAlign: 'center',
+            fontFamily: handFont,
+            fontSize: r.fontScale(22, { min: 18, max: 26 }),
+            color: palette.ink,
+          }}
           numberOfLines={1}
         >
           {dish.name}
         </Text>
-        <Pressable
-          onPress={() => {
-            Haptics.selectionAsync().catch(() => {});
-            setTtsOn((t) => !t);
-          }}
-          hitSlop={10}
-          style={tw`p-2`}
-        >
-          {ttsOn ? (
-            <Volume2 size={20} color="#404040" />
-          ) : (
-            <VolumeX size={20} color="#A3A3A3" />
-          )}
-        </Pressable>
+        <Tappable feedback="press" onPress={() => setTtsOn((v) => !v)}>
+          <SketchCircle size={r.scale(40, { min: 36, max: 48 })} seed={3}>
+            {ttsOn ? (
+              <Volume2 size={16} color={palette.ink} strokeWidth={1.5} />
+            ) : (
+              <VolumeX size={16} color={palette.inkMute} strokeWidth={1.5} />
+            )}
+          </SketchCircle>
+        </Tappable>
       </View>
 
-      {/* Progress bar */}
-      <View style={tw`px-4 mb-2`}>
-        <View style={tw`h-1 bg-gray-100 rounded-full overflow-hidden`}>
+      {/* Progress */}
+      <View style={{ paddingHorizontal: contentPadH, marginTop: 4 }}>
+        <View
+          style={{
+            height: 5,
+            backgroundColor: palette.inkPale,
+            borderRadius: 999,
+            overflow: 'hidden',
+          }}
+        >
           <View
-            style={[
-              tw`h-full bg-[#A68B6A] rounded-full`,
-              { width: `${((stepIndex + 1) / total) * 100}%` },
-            ]}
+            style={{
+              width: `${((stepIndex + 1) / total) * 100}%`,
+              height: '100%',
+              backgroundColor: palette.ink,
+            }}
           />
         </View>
-        <Text style={tw`mt-1.5 text-[11px] text-gray-500 text-center`}>
-          第 {stepIndex + 1} / {total} 步 ·{' '}
-          {currentStep.kind === 'prep' ? '备菜' : '烹饪'}
+        <Text
+          style={{
+            marginTop: 6,
+            textAlign: 'center',
+            fontFamily: noteFont,
+            fontSize: 13,
+            color: palette.inkSoft,
+          }}
+        >
+          第 {stepIndex + 1} / {total} 步 · {currentStep.kind === 'prep' ? '备菜' : '烹饪'}
         </Text>
       </View>
 
-      {/* Step content (居中大字) */}
-      <ScrollView contentContainerStyle={tw`flex-grow justify-center px-6 py-4`}>
+      {/* Step content */}
+      <ScrollView
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingHorizontal: r.isTablet
+            ? Math.max(40, (r.width - r.contentMaxWidth) / 2)
+            : r.scale(28, { min: 18, max: 40 }),
+          paddingVertical: 16,
+          gap: 28,
+        }}
+      >
         <HighlightedStepText
           text={currentStep.instruction}
-          ingredients={dish.ingredients}
-          baseStyle={tw`text-2xl text-gray-900 leading-relaxed font-medium`}
-          highlightStyle={tw`text-[#C44536] font-semibold`}
+          ingredients={dish.ingredients ?? []}
+          baseStyle={{
+            fontFamily: handFont,
+            fontSize: r.fontScale(32, { min: 24, max: 38 }),
+            color: palette.ink,
+            textAlign: 'center',
+            lineHeight: r.fontScale(44, { min: 34, max: 52 }),
+          }}
+          highlightStyle={{
+            color: palette.ink,
+            fontWeight: '700',
+            textDecorationLine: 'underline',
+          }}
           onIngredientPress={setSelectedIngredient}
         />
+
         {currentStep.tip ? (
-          <View style={tw`mt-5 px-3 py-2.5 bg-[#FAF6EE] border border-[#E8DEC8] rounded-lg`}>
-            <Text style={tw`text-sm text-[#A68B6A] leading-relaxed`}>
-              💡 {currentStep.tip}
+          <SketchBox
+            radius={14}
+            seed={4}
+            fillColor={palette.paper}
+            style={{ paddingHorizontal: 18, paddingVertical: 12, maxWidth: 280 }}
+          >
+            <Text
+              style={{
+                fontFamily: noteFont,
+                fontSize: 14,
+                color: palette.inkSoft,
+                lineHeight: 21,
+              }}
+            >
+              ☞ {currentStep.tip}
             </Text>
-          </View>
+          </SketchBox>
         ) : null}
 
-        {/* Timer */}
         {currentStep.duration_min ? (
-          <View style={tw`mt-6 items-center`}>
+          <View>
             {timerEndsAt && remainingSec > 0 ? (
-              <View style={tw`items-center`}>
-                <Text style={tw`text-5xl font-semibold text-gray-900`}>
+              <SketchBox
+                radius={20}
+                seed={5}
+                fillColor={palette.paper}
+                style={{ paddingHorizontal: 30, paddingVertical: 20 }}
+              >
+                <Text
+                  style={{
+                    fontFamily: titleFont,
+                    fontStyle: 'italic',
+                    fontSize: r.fontScale(56, { min: 44, max: 72 }),
+                    color: palette.ink,
+                    fontWeight: '600',
+                    lineHeight: r.fontScale(56, { min: 44, max: 72 }),
+                    textAlign: 'center',
+                  }}
+                >
                   {remainingFmt}
                 </Text>
-                <Pressable
-                  onPress={cancelTimer}
-                  style={tw`mt-3 px-4 py-1.5 rounded-full bg-gray-100`}
-                >
-                  <Text style={tw`text-xs text-gray-600`}>取消计时</Text>
-                </Pressable>
-              </View>
+                <Tappable feedback="press" onPress={cancelTimer}>
+                  <Text
+                    style={{
+                      marginTop: 8,
+                      textAlign: 'center',
+                      fontFamily: noteFont,
+                      fontSize: 13,
+                      color: palette.inkMute,
+                    }}
+                  >
+                    取消计时
+                  </Text>
+                </Tappable>
+              </SketchBox>
             ) : (
-              <Pressable
+              <Tappable
+                feedback="press"
                 onPress={() => startTimer(currentStep.duration_min!)}
-                style={tw`flex-row items-center px-5 py-3 bg-[#A68B6A] rounded-full`}
               >
-                <Timer size={18} color="white" />
-                <Text style={tw`ml-2 text-white text-sm font-medium`}>
-                  开始计时 {currentStep.duration_min} 分钟
-                </Text>
-              </Pressable>
+                <SketchBox
+                  radius={999}
+                  seed={5}
+                  strokeWidth={2}
+                  fillColor={palette.paper}
+                  style={{ paddingHorizontal: 22, paddingVertical: 12 }}
+                >
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    <Timer size={18} color={palette.ink} strokeWidth={1.5} />
+                    <Text
+                      style={{
+                        fontFamily: handFont,
+                        fontSize: 18,
+                        color: palette.ink,
+                      }}
+                    >
+                      开始计时 {currentStep.duration_min} 分钟
+                    </Text>
+                  </View>
+                </SketchBox>
+              </Tappable>
             )}
           </View>
         ) : null}
@@ -275,40 +407,59 @@ export default function CookingScreen() {
 
       {/* Bottom nav */}
       <View
-        style={tw`flex-row items-center justify-between px-4 py-3 border-t border-gray-200`}
+        style={{
+          paddingHorizontal: contentPadH,
+          paddingBottom: 24,
+          flexDirection: 'row',
+          gap: 12,
+        }}
       >
-        <Pressable
-          onPress={goPrev}
-          disabled={stepIndex === 0}
-          style={tw.style(
-            'flex-row items-center px-4 py-3 rounded-full',
-            stepIndex === 0 ? 'bg-gray-100' : 'bg-gray-200',
-          )}
-        >
-          <ChevronLeft size={18} color={stepIndex === 0 ? '#A3A3A3' : '#404040'} />
-          <Text
-            style={tw.style(
-              'ml-1 text-sm font-medium',
-              stepIndex === 0 ? 'text-gray-400' : 'text-gray-700',
-            )}
-          >
-            上一步
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={goNext}
-          style={tw`flex-row items-center px-5 py-3 rounded-full bg-gray-900`}
-        >
-          <Text style={tw`mr-1 text-sm font-medium text-white`}>
-            {stepIndex >= total - 1 ? '完成' : '下一步'}
-          </Text>
-          {stepIndex < total - 1 ? (
-            <ChevronRight size={18} color="white" />
-          ) : null}
-        </Pressable>
+        <View style={{ flex: 1 }}>
+          <Tappable feedback="press" onPress={goPrev} disabled={stepIndex === 0}>
+            <SketchBox
+              radius={999}
+              seed={6}
+              fillColor={palette.paper}
+              style={{ paddingVertical: 14 }}
+            >
+              <Text
+                style={{
+                  textAlign: 'center',
+                  fontFamily: handFont,
+                  fontSize: 20,
+                  color: stepIndex === 0 ? palette.inkMute : palette.inkSoft,
+                }}
+              >
+                上一步
+              </Text>
+            </SketchBox>
+          </Tappable>
+        </View>
+        <View style={{ flex: 1.3 }}>
+          <Tappable feedback="press" onPress={goNext}>
+            <SketchBox
+              radius={999}
+              seed={7}
+              strokeWidth={2}
+              fillColor={palette.paper}
+              style={{ paddingVertical: 14 }}
+            >
+              <Text
+                style={{
+                  textAlign: 'center',
+                  fontFamily: handFont,
+                  fontSize: 22,
+                  color: palette.ink,
+                  fontWeight: '700',
+                }}
+              >
+                {stepIndex >= total - 1 ? '完成 ✓' : '下一步 →'}
+              </Text>
+            </SketchBox>
+          </Tappable>
+        </View>
       </View>
 
-      {/* Ingredient detail sheet — 步骤里点击食材 token 时弹出 */}
       <IngredientSheet
         visible={!!selectedIngredient}
         onClose={() => setSelectedIngredient(null)}

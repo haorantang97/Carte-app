@@ -3,19 +3,27 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   Text,
   View,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ChefHat, Heart, Share2, User } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  ChefHat,
+  Clock,
+  Flame,
+  Heart,
+  Minus,
+  Plus,
+  Share2,
+  Users,
+} from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppContainer } from '@/components/ui/AppContainer';
-import { BackButton } from '@/components/ui/BackButton';
+
+import { Tappable } from '@/components/ui/Tappable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { CommentList } from '@/components/dish/CommentList';
@@ -26,6 +34,14 @@ import {
 } from '@/components/dish/HighlightedStepText';
 import { IngredientSheet } from '@/components/dish/IngredientSheet';
 import { showToast } from '@/components/ui/Toast';
+import {
+  SketchBox,
+  SketchCircle,
+  SketchPill,
+  SketchPhoto,
+  SketchPhotoCircle,
+  SketchUnderline,
+} from '@/components/ui/sketch';
 import { useDishDetail } from '@/hooks/dish/useDishDetail';
 import { useToggleDishLike } from '@/hooks/dish/useDishLikes';
 import {
@@ -37,14 +53,20 @@ import { useSession } from '@/hooks/auth/useSession';
 import { formatPrice } from '@/lib/price';
 import { shareDish } from '@/lib/share';
 import { scaleQuantity } from '@/lib/units';
-import tw from '@/lib/tw';
+import { palette, handFont, noteFont, titleFont } from '@/lib/palette';
+import { useResponsive } from '@/lib/responsive';
 
 export default function DishDetailScreen() {
+  const insets = useSafeAreaInsets();
+  const r = useResponsive();
+  const contentPadH = r.isTablet
+    ? Math.max(24, (r.width - r.contentMaxWidth) / 2)
+    : r.scale(20, { min: 14, max: 28 });
+  const heroH = r.scale(280, { min: 220, max: 360 });
   const { id } = useLocalSearchParams<{ id: string }>();
   const dishId = id!;
   const { t } = useTranslation();
   const { user } = useSession();
-  const insets = useSafeAreaInsets();
 
   const { data: dish, isLoading, error } = useDishDetail(dishId);
   const { data: comments } = useDishComments(dishId);
@@ -52,9 +74,10 @@ export default function DishDetailScreen() {
   const del = useDeleteComment(dishId);
 
   const [pendingDelete, setPendingDelete] = useState<DishCommentRow | null>(null);
-  const [selectedIngredient, setSelectedIngredient] = useState<IngredientLike | null>(null);
+  const [selectedIngredient, setSelectedIngredient] = useState<IngredientLike | null>(
+    null,
+  );
 
-  // 份量缩放:基准为 dish.servings(若缺失默认 2);user 可上下调,食材数字按比例 scale。
   const baseServings = dish?.servings ?? 2;
   const [servingsAdjust, setServingsAdjust] = useState<number | null>(null);
   const servings = servingsAdjust ?? baseServings;
@@ -80,198 +103,395 @@ export default function DishDetailScreen() {
 
   if (isLoading) {
     return (
-      <AppContainer>
-        <View style={tw`flex-1 items-center justify-center`}>
-          <ActivityIndicator size="small" color="#737373" />
-        </View>
-      </AppContainer>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: palette.paper,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <ActivityIndicator size="small" color={palette.inkSoft} />
+      </View>
     );
   }
   if (error || !dish) {
     return (
-      <AppContainer>
-        <View style={tw`flex-row items-center px-4 pt-1`}>
-          <BackButton />
+      <View style={{ flex: 1, backgroundColor: palette.paper, paddingTop: insets.top }}>
+        <View style={{ flexDirection: 'row', paddingHorizontal: 20, paddingTop: 12 }}>
+          <Tappable feedback="press" onPress={() => router.back()}>
+            <SketchCircle size={40} seed={1}>
+              <ArrowLeft size={18} color={palette.ink} strokeWidth={1.5} />
+            </SketchCircle>
+          </Tappable>
         </View>
         <EmptyState title={t('diner.menuNotFound')} />
-      </AppContainer>
+      </View>
     );
   }
 
   return (
-    <View style={tw`flex-1 bg-bg`}>
-      {/* Fixed top bar */}
-      <View
-        style={[
-          tw`absolute left-0 right-0 z-10 px-2 flex-row items-center justify-between bg-white/85`,
-          { paddingTop: insets.top + 4, paddingBottom: 8 },
-        ]}
-      >
-        <BackButton />
-        <View style={tw`flex-row items-center gap-2`}>
-          <Pressable
-            onPress={onLike}
-            hitSlop={8}
-            style={tw`flex-row items-center px-3 py-2 rounded-full bg-white/90 border border-gray-200`}
-          >
-            <Heart
-              size={16}
-              color={dish.liked_by_me ? '#A68B6A' : '#737373'}
-              fill={dish.liked_by_me ? '#A68B6A' : 'transparent'}
-            />
-            {dish.likes_count > 0 ? (
-              <Text
-                style={tw.style(
-                  'ml-1.5 text-xs font-medium',
-                  dish.liked_by_me ? 'text-[#A68B6A]' : 'text-gray-700',
-                )}
-              >
-                {dish.likes_count}
-              </Text>
-            ) : null}
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              Haptics.selectionAsync().catch(() => {});
-              shareDish({
-                id: dish.id,
-                name: dish.name,
-                description: dish.description,
-                chef_username: dish.chef_username,
-                group_name: dish.group_name,
-              });
-            }}
-            hitSlop={8}
-            style={tw`p-2 rounded-full bg-white/90 border border-gray-200`}
-          >
-            <Share2 size={16} color="#737373" />
-          </Pressable>
-        </View>
-      </View>
-
+    <View style={{ flex: 1, backgroundColor: palette.paper }}>
       <KeyboardAvoidingView
-        style={tw`flex-1`}
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={[
-            tw`pb-32`,
-            { paddingTop: insets.top + 56 },
-          ]}
+          contentContainerStyle={{
+            paddingTop: insets.top + 12,
+            paddingBottom: insets.bottom + 100,
+          }}
+          showsVerticalScrollIndicator={false}
         >
-          {/* Hero image */}
-          {dish.image_url ? (
-            <Image
-              source={{ uri: dish.image_url }}
-              style={[tw`w-full bg-gray-100`, { aspectRatio: 1 }]}
-              contentFit="cover"
-              transition={200}
-            />
-          ) : (
-            <View style={[tw`w-full bg-gray-100`, { aspectRatio: 1 }]} />
-          )}
+          {/* Top bar */}
+          <View
+            style={{
+              paddingHorizontal: contentPadH,
+              paddingBottom: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Tappable feedback="press" onPress={() => router.back()}>
+              <SketchCircle size={r.scale(40, { min: 36, max: 48 })} seed={1}>
+                <ArrowLeft size={18} color={palette.ink} strokeWidth={1.5} />
+              </SketchCircle>
+            </Tappable>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Tappable feedback="press" onPress={onLike}>
+                <SketchBox
+                  radius={999}
+                  seed={2}
+                  fillColor={palette.paper}
+                  style={{ paddingHorizontal: 12, paddingVertical: 6 }}
+                >
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <Heart
+                      size={16}
+                      color={palette.ink}
+                      strokeWidth={1.5}
+                      fill={dish.liked_by_me ? palette.ink : 'transparent'}
+                    />
+                    {dish.likes_count > 0 ? (
+                      <Text
+                        style={{
+                          fontFamily: handFont,
+                          fontSize: 18,
+                          color: palette.ink,
+                        }}
+                      >
+                        {dish.likes_count}
+                      </Text>
+                    ) : null}
+                  </View>
+                </SketchBox>
+              </Tappable>
+              <Tappable
+                feedback="press"
+                onPress={() => {
+                  shareDish({
+                    id: dish.id,
+                    name: dish.name,
+                    description: dish.description,
+                    chef_username: dish.chef_username,
+                    group_name: dish.group_name,
+                  });
+                }}
+              >
+                <SketchCircle size={r.scale(40, { min: 36, max: 48 })} seed={3}>
+                  <Share2 size={16} color={palette.ink} strokeWidth={1.5} />
+                </SketchCircle>
+              </Tappable>
+            </View>
+          </View>
 
-          <View style={tw`px-4 pt-4`}>
-            {/* Cuisine + carte name pills */}
-            <View style={tw`flex-row gap-1.5 flex-wrap`}>
-              {dish.cuisine ? (
-                <View style={tw`px-2.5 py-1 rounded-full bg-[#FAF6EE] border border-[#E8DEC8]`}>
-                  <Text style={tw`text-[10px] text-[#A68B6A] font-medium`}>{dish.cuisine}</Text>
-                </View>
-              ) : null}
-              <View style={tw`px-2.5 py-1 rounded-full bg-gray-100`}>
-                <Text style={tw`text-[10px] text-gray-700`}>{dish.group_name}</Text>
+          {/* Hero photo */}
+          <View style={{ paddingHorizontal: contentPadH, paddingTop: 4, paddingBottom: 20 }}>
+            {dish.image_url ? (
+              <SketchPhoto
+                src={dish.image_url}
+                radius={20}
+                seed={9}
+                style={{ width: '100%', height: heroH }}
+              />
+            ) : (
+              <View
+                style={{
+                  width: '100%',
+                  height: heroH,
+                  borderRadius: 20,
+                  backgroundColor: palette.inkPale,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <ChefHat size={56} color={palette.ink} strokeWidth={1.4} />
               </View>
+            )}
+          </View>
+
+          <View style={{ paddingHorizontal: contentPadH, gap: 20 }}>
+            {/* Pills */}
+            <View
+              style={{
+                flexDirection: 'row',
+                gap: 8,
+                flexWrap: 'wrap',
+              }}
+            >
+              {dish.cuisine ? (
+                <SketchPill seed={1}>
+                  <Text style={{ fontFamily: handFont, fontSize: 14, color: palette.ink }}>
+                    {dish.cuisine}
+                  </Text>
+                </SketchPill>
+              ) : null}
+              <SketchPill seed={2}>
+                <Text style={{ fontFamily: handFont, fontSize: 14, color: palette.ink }}>
+                  {dish.group_name}
+                </Text>
+              </SketchPill>
               {dish.source_platform ? (
-                <View style={tw`px-2.5 py-1 rounded-full bg-pink-50 border border-pink-100`}>
-                  <Text style={tw`text-[10px] text-pink-700`}>{dish.source_platform}</Text>
-                </View>
+                <SketchPill seed={3}>
+                  <Text style={{ fontFamily: handFont, fontSize: 14, color: palette.ink }}>
+                    {dish.source_platform}
+                  </Text>
+                </SketchPill>
               ) : null}
             </View>
 
-            <View style={tw`mt-3 flex-row items-start justify-between`}>
-              <Text style={tw`flex-1 text-2xl font-semibold text-gray-900`}>{dish.name}</Text>
+            {/* Title + price */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'flex-end',
+                justifyContent: 'space-between',
+                gap: 12,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontFamily: handFont,
+                    fontSize: r.fontScale(40, { min: 30, max: 48 }),
+                    color: palette.ink,
+                    lineHeight: r.fontScale(40, { min: 30, max: 48 }),
+                    fontWeight: '700',
+                  }}
+                >
+                  {dish.name}
+                </Text>
+                <SketchUnderline
+                  width={r.scale(140, { min: 110, max: 170 })}
+                  seed={4}
+                  color={palette.ink}
+                />
+              </View>
               {dish.price > 0 ? (
-                <Text style={tw`ml-3 text-lg font-medium text-[#A68B6A]`}>
+                <Text
+                  style={{
+                    fontFamily: titleFont,
+                    fontStyle: 'italic',
+                    fontSize: r.fontScale(30, { min: 24, max: 36 }),
+                    color: palette.ink,
+                    fontWeight: '600',
+                  }}
+                >
                   {formatPrice(dish.price)}
                 </Text>
               ) : null}
             </View>
 
-            {/* Meta line: 时间 · 份量 · 难度 · 千卡 */}
-            {(() => {
-              const parts: string[] = [];
-              if (dish.total_time_min) parts.push(`${dish.total_time_min} 分钟`);
-              if (dish.servings) parts.push(`${dish.servings} 人份`);
-              if (dish.calories) parts.push(`${dish.calories} 千卡`);
-              if (dish.difficulty) {
-                const map: Record<string, string> = { easy: '简单', medium: '中等', hard: '挑战' };
-                parts.push(map[dish.difficulty] ?? dish.difficulty);
-              }
-              return parts.length > 0 ? (
-                <Text style={tw`mt-1.5 text-xs text-gray-500`}>{parts.join(' · ')}</Text>
-              ) : null;
-            })()}
+            {/* Meta */}
+            <View
+              style={{
+                flexDirection: 'row',
+                gap: 16,
+                flexWrap: 'wrap',
+              }}
+            >
+              {dish.total_time_min ? (
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                >
+                  <Clock size={14} color={palette.inkSoft} strokeWidth={1.5} />
+                  <Text
+                    style={{ fontFamily: noteFont, fontSize: 14, color: palette.inkSoft }}
+                  >
+                    {dish.total_time_min} min
+                  </Text>
+                </View>
+              ) : null}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Users size={14} color={palette.inkSoft} strokeWidth={1.5} />
+                <Text
+                  style={{ fontFamily: noteFont, fontSize: 14, color: palette.inkSoft }}
+                >
+                  {servings} 人份
+                </Text>
+              </View>
+              {dish.calories ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Flame size={14} color={palette.inkSoft} strokeWidth={1.5} />
+                  <Text
+                    style={{ fontFamily: noteFont, fontSize: 14, color: palette.inkSoft }}
+                  >
+                    {dish.calories} cal
+                  </Text>
+                </View>
+              ) : null}
+              {dish.difficulty ? (
+                <Text
+                  style={{ fontFamily: noteFont, fontSize: 14, color: palette.inkSoft }}
+                >
+                  {(() => {
+                    const map: Record<string, string> = {
+                      easy: '简单',
+                      medium: '中等',
+                      hard: '挑战',
+                    };
+                    return map[dish.difficulty] ?? dish.difficulty;
+                  })()}
+                </Text>
+              ) : null}
+            </View>
 
+            {/* Description */}
             {dish.description ? (
-              <Text style={tw`mt-2 text-sm text-gray-700 leading-relaxed`}>
+              <Text
+                style={{
+                  fontFamily: noteFont,
+                  fontSize: 15,
+                  color: palette.ink,
+                  lineHeight: 24,
+                }}
+              >
                 {dish.description}
               </Text>
             ) : null}
 
             {/* Tags */}
             {dish.tags && dish.tags.length > 0 ? (
-              <View style={tw`mt-3 flex-row flex-wrap gap-1.5`}>
-                {dish.tags.map((tag) => (
-                  <View key={tag} style={tw`px-2.5 py-1 rounded-full bg-gray-100`}>
-                    <Text style={tw`text-[10px] text-gray-600`}>#{tag}</Text>
-                  </View>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  gap: 8,
+                  flexWrap: 'wrap',
+                }}
+              >
+                {dish.tags.map((tag, i) => (
+                  <SketchPill key={tag} seed={i + 5} style={{ paddingTop: 4, paddingBottom: 4 }}>
+                    <Text
+                      style={{ fontFamily: handFont, fontSize: 13, color: palette.ink }}
+                    >
+                      #{tag}
+                    </Text>
+                  </SketchPill>
                 ))}
               </View>
             ) : null}
 
             {/* Chef card */}
-            <View style={tw`mt-4 flex-row items-center bg-gray-50 rounded-xl p-3`}>
+            <SketchBox
+              radius={14}
+              seed={6}
+              fillColor={palette.paper}
+              style={{ padding: 12 }}
+            >
               <View
-                style={tw`w-10 h-10 rounded-full bg-white items-center justify-center overflow-hidden`}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
               >
-                {dish.chef_avatar_url ? (
-                  <Image
-                    source={{ uri: dish.chef_avatar_url }}
-                    style={tw`w-10 h-10`}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <User size={18} color="#A3A3A3" strokeWidth={1.5} />
-                )}
+                <SketchPhotoCircle
+                  src={dish.chef_avatar_url ?? null}
+                  size={42}
+                  seed={7}
+                />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text
+                    style={{
+                      fontFamily: handFont,
+                      fontSize: 20,
+                      color: palette.ink,
+                      lineHeight: 21,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {dish.chef_username}
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: noteFont,
+                      fontSize: 12,
+                      color: palette.inkSoft,
+                      marginTop: 2,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {dish.group_name}
+                  </Text>
+                </View>
               </View>
-              <View style={tw`ml-3`}>
-                <Text style={tw`text-sm font-medium text-gray-900`}>{dish.chef_username}</Text>
-                <Text style={tw`text-[11px] text-gray-500 mt-0.5`}>{dish.group_name}</Text>
-              </View>
-            </View>
+            </SketchBox>
 
-            {/* Nutrition (per serving) */}
+            {/* Nutrition */}
             {dish.nutrition ? (
-              <View style={tw`mt-5`}>
-                <Text style={tw`text-xs font-medium text-gray-700 mb-2`}>营养信息(每份)</Text>
-                <View style={tw`flex-row gap-2`}>
+              <View>
+                <Section title="营养（每份）" seed={1} />
+                <View
+                  style={{
+                    marginTop: 12,
+                    flexDirection: 'row',
+                    gap: 8,
+                  }}
+                >
                   {[
                     { key: 'protein_g', label: '蛋白质' },
                     { key: 'fat_g', label: '脂肪' },
                     { key: 'carbs_g', label: '碳水' },
                     { key: 'fiber_g', label: '纤维' },
-                  ].map(({ key, label }) => {
-                    const v = (dish.nutrition as Record<string, number | undefined>)?.[key];
+                  ].map(({ key, label }, i) => {
+                    const v = (dish.nutrition as Record<string, number | undefined>)?.[
+                      key
+                    ];
                     return (
-                      <View
-                        key={key}
-                        style={tw`flex-1 bg-gray-50 rounded-lg px-2.5 py-2`}
-                      >
-                        <Text style={tw`text-[10px] text-gray-500`}>{label}</Text>
-                        <Text style={tw`text-sm font-semibold text-gray-900 mt-0.5`}>
-                          {v != null ? `${v}g` : '—'}
-                        </Text>
+                      <View key={key} style={{ flex: 1 }}>
+                        <SketchBox
+                          radius={12}
+                          seed={i + 1}
+                          fillColor={palette.paper}
+                          style={{ paddingVertical: 12 }}
+                        >
+                          <Text
+                            style={{
+                              textAlign: 'center',
+                              fontFamily: handFont,
+                              fontSize: 22,
+                              color: palette.ink,
+                              lineHeight: 22,
+                              fontWeight: '700',
+                            }}
+                          >
+                            {v != null ? `${v}g` : '—'}
+                          </Text>
+                          <Text
+                            style={{
+                              textAlign: 'center',
+                              fontFamily: noteFont,
+                              fontSize: 11,
+                              color: palette.inkSoft,
+                              marginTop: 4,
+                            }}
+                          >
+                            {label}
+                          </Text>
+                        </SketchBox>
                       </View>
                     );
                   })}
@@ -279,153 +499,262 @@ export default function DishDetailScreen() {
               </View>
             ) : null}
 
-            {/* Ingredients (含份量调整) */}
-            {dish.ingredients.length > 0 ? (
-              <View style={tw`mt-5`}>
-                <View style={tw`flex-row items-center justify-between mb-2`}>
-                  <Text style={tw`text-xs font-medium text-gray-700`}>
-                    {t('chef.ingredients')}
-                  </Text>
-                  {/* Servings stepper — 可调节,数字按比例缩放 */}
-                  <View style={tw`flex-row items-center gap-2`}>
-                    <Pressable
-                      onPress={() => {
-                        Haptics.selectionAsync().catch(() => {});
-                        setServingsAdjust(Math.max(1, servings - 1));
+            {/* Ingredients */}
+            {dish.ingredients && dish.ingredients.length > 0 ? (
+              <View>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'flex-end',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <View>
+                    <Text
+                      style={{
+                        fontFamily: handFont,
+                        fontSize: 26,
+                        color: palette.ink,
+                        lineHeight: 26,
                       }}
-                      hitSlop={8}
-                      style={tw`w-6 h-6 rounded-full bg-gray-100 items-center justify-center`}
                     >
-                      <Text style={tw`text-sm text-gray-700 leading-none`}>−</Text>
-                    </Pressable>
-                    <Text style={tw`text-xs font-medium text-gray-900 min-w-12 text-center`}>
-                      {servings} 人份
+                      食材
                     </Text>
-                    <Pressable
-                      onPress={() => {
-                        Haptics.selectionAsync().catch(() => {});
-                        setServingsAdjust(Math.min(20, servings + 1));
-                      }}
-                      hitSlop={8}
-                      style={tw`w-6 h-6 rounded-full bg-gray-100 items-center justify-center`}
-                    >
-                      <Text style={tw`text-sm text-gray-700 leading-none`}>+</Text>
-                    </Pressable>
+                    <SketchUnderline width={50} seed={2} color={palette.ink} />
                   </View>
+                  <SketchBox
+                    radius={999}
+                    seed={3}
+                    fillColor={palette.paper}
+                    style={{ paddingHorizontal: 6, paddingVertical: 4 }}
+                  >
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      <Tappable
+                        feedback="press"
+                        onPress={() =>
+                          setServingsAdjust(Math.max(1, servings - 1))
+                        }
+                      >
+                        <SketchCircle size={22} seed={11}>
+                          <Minus size={11} color={palette.ink} strokeWidth={1.6} />
+                        </SketchCircle>
+                      </Tappable>
+                      <Text
+                        style={{
+                          fontFamily: handFont,
+                          fontSize: 16,
+                          color: palette.ink,
+                        }}
+                      >
+                        {servings} 人份
+                      </Text>
+                      <Tappable
+                        feedback="press"
+                        onPress={() =>
+                          setServingsAdjust(Math.min(20, servings + 1))
+                        }
+                      >
+                        <SketchCircle size={22} seed={12}>
+                          <Plus size={11} color={palette.ink} strokeWidth={1.6} />
+                        </SketchCircle>
+                      </Tappable>
+                    </View>
+                  </SketchBox>
                 </View>
                 {servings !== baseServings ? (
-                  <Text style={tw`text-[10px] text-[#A68B6A] mb-2`}>
+                  <Text
+                    style={{
+                      fontFamily: noteFont,
+                      fontSize: 11,
+                      color: palette.inkSoft,
+                      marginTop: 8,
+                    }}
+                  >
                     已按 {servings}/{baseServings} 比例调整食材用量
                   </Text>
                 ) : null}
-                <View style={tw`flex-row flex-wrap gap-1.5`}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    gap: 8,
+                    marginTop: 12,
+                  }}
+                >
                   {dish.ingredients.map((i, idx) => {
                     const name = typeof i === 'string' ? i : i.name;
-                    const qtyRaw = typeof i === 'string' ? '' : (i.quantity ?? '');
+                    const qtyRaw = typeof i === 'string' ? '' : i.quantity ?? '';
                     const qty = scaleQuantity(qtyRaw, ratio);
-                    const text = qty ? `${name} ${qty}` : name;
                     return (
-                      <View key={`${idx}-${text}`} style={tw`px-2.5 py-1 rounded-full bg-gray-100`}>
-                        <Text style={tw`text-[11px] text-gray-700`}>{text}</Text>
-                      </View>
+                      <Tappable
+                        key={`${idx}-${name}`}
+                        feedback="press"
+                        onPress={() =>
+                          setSelectedIngredient(
+                            typeof i === 'string' ? { name: i } : (i as IngredientLike),
+                          )
+                        }
+                      >
+                        <SketchPill seed={idx + 1}>
+                          <Text
+                            style={{
+                              fontFamily: handFont,
+                              fontSize: 14,
+                              color: palette.ink,
+                              fontWeight: '700',
+                            }}
+                          >
+                            {name}
+                          </Text>
+                          {qty ? (
+                            <Text
+                              style={{
+                                fontFamily: noteFont,
+                                fontSize: 13,
+                                color: palette.inkMute,
+                                marginLeft: 4,
+                              }}
+                            >
+                              {qty}
+                            </Text>
+                          ) : null}
+                        </SketchPill>
+                      </Tappable>
                     );
                   })}
                 </View>
               </View>
             ) : null}
 
-            {/* Tools */}
-            {dish.tools && dish.tools.length > 0 ? (
-              <View style={tw`mt-5`}>
-                <Text style={tw`text-xs font-medium text-gray-700 mb-2`}>工具</Text>
-                <View style={tw`flex-row flex-wrap gap-1.5`}>
-                  {dish.tools.map((tool) => (
-                    <View key={tool} style={tw`px-2.5 py-1 rounded-md bg-white border border-gray-200`}>
-                      <Text style={tw`text-[11px] text-gray-700`}>{tool}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            ) : null}
-
-            {/* "开始做菜" CTA — 仅在有 prep 或 cook 步骤时显示 */}
+            {/* CTA */}
             {((dish.prep_steps?.length ?? 0) + (dish.cook_steps?.length ?? 0)) > 0 ? (
-              <Pressable
+              <Tappable
+                feedback="press"
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  router.push(`/cook/${dish.id}`);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+                    () => {},
+                  );
+                  router.push(`/cook/${dish.id}` as any);
                 }}
-                style={tw`mt-5 flex-row items-center justify-center gap-2 py-3.5 rounded-xl bg-[#A68B6A]`}
               >
-                <ChefHat size={18} color="white" />
-                <Text style={tw`text-sm font-medium text-white`}>开始做菜</Text>
-              </Pressable>
+                <SketchBox
+                  radius={999}
+                  seed={4}
+                  strokeWidth={2}
+                  fillColor={palette.paper}
+                  style={{ paddingVertical: 14 }}
+                >
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    <ChefHat size={20} color={palette.ink} strokeWidth={1.6} />
+                    <Text
+                      style={{
+                        fontFamily: handFont,
+                        fontSize: 24,
+                        color: palette.ink,
+                        fontWeight: '700',
+                      }}
+                    >
+                      开始做菜 →
+                    </Text>
+                  </View>
+                </SketchBox>
+              </Tappable>
             ) : null}
 
             {/* Prep steps */}
             {dish.prep_steps && dish.prep_steps.length > 0 ? (
-              <View style={tw`mt-5`}>
-                <Text style={tw`text-xs font-medium text-gray-700 mb-2`}>备菜步骤</Text>
-                <View style={tw`gap-3`}>
-                  {dish.prep_steps.sort((a, b) => a.order - b.order).map((s) => (
-                    <StepRow
-                      key={`prep-${s.order}`}
-                      step={s}
-                      accent="#A68B6A"
-                      ingredients={dish.ingredients}
-                      onIngredientPress={setSelectedIngredient}
-                    />
-                  ))}
+              <View>
+                <Section title="备菜步骤" seed={5} />
+                <View style={{ gap: 12, marginTop: 12 }}>
+                  {dish.prep_steps
+                    .slice()
+                    .sort((a, b) => a.order - b.order)
+                    .map((s, i) => (
+                      <StepRow
+                        key={`prep-${s.order}`}
+                        step={s}
+                        seed={i + 10}
+                        ingredients={dish.ingredients}
+                        onIngredientPress={setSelectedIngredient}
+                      />
+                    ))}
                 </View>
               </View>
             ) : null}
 
             {/* Cook steps */}
             {dish.cook_steps && dish.cook_steps.length > 0 ? (
-              <View style={tw`mt-5`}>
-                <Text style={tw`text-xs font-medium text-gray-700 mb-2`}>烹饪步骤</Text>
-                <View style={tw`gap-3`}>
-                  {dish.cook_steps.sort((a, b) => a.order - b.order).map((s) => (
-                    <StepRow
-                      key={`cook-${s.order}`}
-                      step={s}
-                      accent="#A68B6A"
-                      ingredients={dish.ingredients}
-                      onIngredientPress={setSelectedIngredient}
-                    />
-                  ))}
+              <View>
+                <Section title="烹饪步骤" seed={6} />
+                <View style={{ gap: 12, marginTop: 12 }}>
+                  {dish.cook_steps
+                    .slice()
+                    .sort((a, b) => a.order - b.order)
+                    .map((s, i) => (
+                      <StepRow
+                        key={`cook-${s.order}`}
+                        step={s}
+                        seed={i + 20}
+                        ingredients={dish.ingredients}
+                        onIngredientPress={setSelectedIngredient}
+                      />
+                    ))}
                 </View>
               </View>
             ) : dish.recipe ? (
-              <View style={tw`mt-5`}>
-                <Text style={tw`text-xs font-medium text-gray-700 mb-2`}>
-                  {t('chef.recipe')}
+              <View>
+                <Section title={t('chef.recipe')} seed={7} />
+                <Text
+                  style={{
+                    fontFamily: noteFont,
+                    fontSize: 15,
+                    color: palette.ink,
+                    lineHeight: 24,
+                    marginTop: 12,
+                  }}
+                >
+                  {dish.recipe}
                 </Text>
-                <Text style={tw`text-sm text-gray-700 leading-relaxed`}>{dish.recipe}</Text>
               </View>
             ) : null}
 
-            {/* Divider */}
-            <View style={tw`h-px bg-gray-200 my-5`} />
-
             {/* Comments */}
-            <Text style={tw`text-xs font-medium text-gray-700 mb-3`}>
-              {t('dish.comments')} ({comments?.length ?? 0})
-            </Text>
-            <CommentList
-              comments={comments ?? []}
-              myUserId={user?.id}
-              onDelete={(c) => setPendingDelete(c)}
-            />
+            <View style={{ marginTop: 8 }}>
+              <Section title={`${t('dish.comments')} (${comments?.length ?? 0})`} seed={8} />
+              <View style={{ marginTop: 12 }}>
+                <CommentList
+                  comments={comments ?? []}
+                  myUserId={user?.id}
+                  onDelete={(c) => setPendingDelete(c)}
+                />
+              </View>
+            </View>
           </View>
         </ScrollView>
 
         {/* Bottom composer */}
         <View
-          style={[
-            tw`absolute bottom-0 left-0 right-0 px-4 pt-2 bg-bg border-t border-gray-200`,
-            { paddingBottom: insets.bottom + 8 },
-          ]}
+          style={{
+            paddingHorizontal: contentPadH,
+            paddingTop: 8,
+            paddingBottom: insets.bottom + 8,
+            borderTopWidth: 1,
+            borderTopColor: palette.inkPale,
+            backgroundColor: palette.paper,
+          }}
         >
           <CommentComposer dishId={dishId} />
         </View>
@@ -441,7 +770,6 @@ export default function DishDetailScreen() {
         loading={del.isPending}
       />
 
-      {/* Ingredient detail sheet — 步骤里点击食材 token 时弹出 */}
       <IngredientSheet
         visible={!!selectedIngredient}
         onClose={() => setSelectedIngredient(null)}
@@ -456,49 +784,121 @@ export default function DishDetailScreen() {
   );
 }
 
+function Section({ title, seed }: { title: string; seed: number }) {
+  return (
+    <View>
+      <Text
+        style={{
+          fontFamily: handFont,
+          fontSize: 26,
+          color: palette.ink,
+          lineHeight: 26,
+        }}
+      >
+        {title}
+      </Text>
+      <SketchUnderline
+        width={Math.max(50, title.length * 18)}
+        seed={seed}
+        color={palette.ink}
+      />
+    </View>
+  );
+}
+
 function StepRow({
   step,
-  accent,
+  seed,
   ingredients,
   onIngredientPress,
 }: {
   step: { order: number; instruction: string; duration_min?: number; tip?: string };
-  accent: string;
+  seed: number;
   ingredients?: Array<string | IngredientLike>;
   onIngredientPress?: (ing: IngredientLike) => void;
 }) {
   return (
-    <View style={tw`flex-row gap-3`}>
-      <View
-        style={[
-          tw`w-7 h-7 rounded-full items-center justify-center mt-0.5`,
-          { backgroundColor: accent + '22' },
-        ]}
-      >
-        <Text style={[tw`text-xs font-semibold`, { color: accent }]}>{step.order}</Text>
-      </View>
-      <View style={tw`flex-1`}>
+    <View style={{ flexDirection: 'row', gap: 12 }}>
+      <SketchCircle size={32} seed={seed}>
+        <Text
+          style={{
+            fontFamily: titleFont,
+            fontStyle: 'italic',
+            fontSize: 16,
+            color: palette.ink,
+            fontWeight: '700',
+          }}
+        >
+          {step.order}
+        </Text>
+      </SketchCircle>
+      <View style={{ flex: 1, minWidth: 0 }}>
         {ingredients && ingredients.length > 0 ? (
           <HighlightedStepText
             text={step.instruction}
             ingredients={ingredients}
+            baseStyle={{
+              fontFamily: noteFont,
+              fontSize: 15,
+              color: palette.ink,
+              lineHeight: 23,
+            }}
+            highlightStyle={{
+              color: palette.ink,
+              fontWeight: '700',
+              textDecorationLine: 'underline',
+            }}
             onIngredientPress={onIngredientPress}
           />
         ) : (
-          <Text style={tw`text-sm text-gray-900 leading-relaxed`}>{step.instruction}</Text>
+          <Text
+            style={{
+              fontFamily: noteFont,
+              fontSize: 15,
+              color: palette.ink,
+              lineHeight: 23,
+            }}
+          >
+            {step.instruction}
+          </Text>
         )}
         {step.tip ? (
-          <Text style={tw`mt-1 text-[11px] text-[#A68B6A] leading-relaxed`}>
-            💡 {step.tip}
-          </Text>
+          <View
+            style={{
+              marginTop: 8,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderWidth: 1,
+              borderColor: palette.inkMute,
+              borderStyle: 'dashed',
+              borderRadius: 10,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: noteFont,
+                fontSize: 13,
+                color: palette.inkSoft,
+                lineHeight: 18,
+              }}
+            >
+              ☞ {step.tip}
+            </Text>
+          </View>
         ) : null}
         {step.duration_min ? (
-          <Text style={tw`mt-1 text-[10px] text-gray-500`}>
-            约 {step.duration_min} 分钟
+          <Text
+            style={{
+              fontFamily: noteFont,
+              fontSize: 12,
+              color: palette.inkMute,
+              marginTop: 6,
+            }}
+          >
+            ⏱ 约 {step.duration_min} 分钟
           </Text>
         ) : null}
       </View>
     </View>
   );
 }
-

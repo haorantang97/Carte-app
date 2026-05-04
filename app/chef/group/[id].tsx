@@ -1,38 +1,54 @@
 import { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Eye, Pencil, Plus, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Eye, Lock, Pencil, Plus, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { AppContainer } from '@/components/ui/AppContainer';
-import { BackButton } from '@/components/ui/BackButton';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+
+import { Tappable } from '@/components/ui/Tappable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { CategorySheet } from '@/components/chef/CategorySheet';
 import { DishCard } from '@/components/chef/DishCard';
-import { DishSheet, type DishSheetMode, type DishPrefill } from '@/components/chef/DishSheet';
+import {
+  DishSheet,
+  type DishSheetMode,
+  type DishPrefill,
+} from '@/components/chef/DishSheet';
 import { AddDishMethodSheet } from '@/components/chef/AddDishMethodSheet';
 import { AILimitSheet } from '@/components/chef/AILimitSheet';
 import { SmartFillSheet } from '@/components/chef/SmartFillSheet';
-import { useAiQuota } from '@/hooks/useAiQuota';
 import { WishlistSection } from '@/components/wishlist/WishlistSection';
 import { showToast } from '@/components/ui/Toast';
+import {
+  SketchBox,
+  SketchCircle,
+  SketchPill,
+} from '@/components/ui/sketch';
+
+import { useAiQuota } from '@/hooks/useAiQuota';
 import { useChefGroupDetails } from '@/hooks/chef/useChefGroupDetails';
 import { useDeleteCategory } from '@/hooks/chef/useCategoryMutations';
 import { useDeleteDish } from '@/hooks/chef/useDishMutations';
 import { useRetryExtractDish } from '@/hooks/storage/useStartExtractDish';
 import { useRealtimeDishes } from '@/hooks/realtime/useRealtimeDishes';
 import { supabase } from '@/lib/supabase';
+
+import { palette, handFont, noteFont, uiFont } from '@/lib/palette';
+import { useResponsive } from '@/lib/responsive';
 import type { Category, Dish } from '@/types/domain';
-import tw from '@/lib/tw';
 
 export default function ChefGroupDetails() {
+  const insets = useSafeAreaInsets();
+  const r = useResponsive();
+  const contentPadH = r.isTablet
+    ? Math.max(24, (r.width - r.contentMaxWidth) / 2)
+    : r.scale(20, { min: 14, max: 28 });
+  // Tablet shows 3-col dish grid; phones stay 2-col.
+  const dishCols = r.isTablet ? 3 : 2;
+  const dishColWidth = `${(100 - (dishCols - 1) * 2) / dishCols}%` as const;
   const { id } = useLocalSearchParams<{ id: string }>();
   const groupId = id!;
   const { t } = useTranslation();
@@ -40,9 +56,7 @@ export default function ChefGroupDetails() {
   const delCategory = useDeleteCategory(groupId);
   const delDish = useDeleteDish(groupId);
   const retry = useRetryExtractDish();
-  // Realtime: dish row changes (extract progress / fields filled in) push to UI
   useRealtimeDishes(groupId);
-  // Sweep stuck extractions (>5min still 'extracting') on page load
   useMemo(() => {
     void supabase.rpc('sweep_stuck_extractions');
   }, [groupId]);
@@ -50,9 +64,10 @@ export default function ChefGroupDetails() {
   const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
   const [tab, setTab] = useState<'menu' | 'wishlist'>('menu');
 
-  const [categorySheet, setCategorySheet] = useState<{ open: boolean; category: Category | null }>(
-    { open: false, category: null },
-  );
+  const [categorySheet, setCategorySheet] = useState<{
+    open: boolean;
+    category: Category | null;
+  }>({ open: false, category: null });
   const [dishSheet, setDishSheet] = useState<{
     open: boolean;
     dish: Dish | null;
@@ -78,6 +93,8 @@ export default function ChefGroupDetails() {
     () => dishes.filter((d) => d.category_id === activeCatId),
     [dishes, activeCatId],
   );
+  const totalDishCount = dishes.length;
+  const wishlistCount = (data as any)?.wishlistCount ?? 0;
 
   const onConfirmDelCategory = async () => {
     if (!deletingCategory) return;
@@ -91,6 +108,7 @@ export default function ChefGroupDetails() {
       setDeletingCategory(null);
     }
   };
+
   const onConfirmDelDish = async () => {
     if (!deletingDish) return;
     try {
@@ -105,202 +123,357 @@ export default function ChefGroupDetails() {
 
   if (isLoading) {
     return (
-      <AppContainer>
-        <View style={tw`flex-1 items-center justify-center`}>
-          <ActivityIndicator size="small" color="#737373" />
-        </View>
-      </AppContainer>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: palette.paper,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <ActivityIndicator size="small" color={palette.inkSoft} />
+      </View>
     );
   }
   if (error || !data) {
     return (
-      <AppContainer>
-        <View style={tw`flex-row items-center px-4 pt-1`}>
-          <BackButton />
+      <View style={{ flex: 1, backgroundColor: palette.paper, paddingTop: insets.top }}>
+        <View style={{ flexDirection: 'row', paddingHorizontal: 20, paddingTop: 12 }}>
+          <Tappable feedback="press" onPress={() => router.back()}>
+            <SketchCircle size={40} seed={1}>
+              <ArrowLeft size={18} color={palette.ink} strokeWidth={1.5} />
+            </SketchCircle>
+          </Tappable>
         </View>
         <EmptyState title={t('diner.menuNotFound')} />
-      </AppContainer>
+      </View>
     );
   }
 
   return (
-    <AppContainer>
-      {/* Header */}
-      <View style={tw`px-4 pt-1 pb-2 flex-row items-center`}>
-        <BackButton />
-        <Text style={tw`flex-1 ml-2 text-xl font-semibold text-gray-900`} numberOfLines={1}>
-          {data.group.name}
-        </Text>
-        <Pressable
-          onPress={() => {
-            Haptics.selectionAsync().catch(() => {});
-            router.push({
-              pathname: '/diner/group/[id]',
-              params: { id: groupId, preview: '1' },
-            } as any);
-          }}
-          hitSlop={6}
-          style={({ pressed }) => [
-            tw`flex-row items-center px-2.5 py-1.5 rounded-full border border-gray-300`,
-            { opacity: pressed ? 0.7 : 1 },
-          ]}
-        >
-          <Eye size={13} color="#171717" strokeWidth={1.5} />
-          <Text style={tw`ml-1 text-xs text-gray-900`}>预览</Text>
-        </Pressable>
-      </View>
-
-      {/* Code row */}
-      <View style={tw`px-4 pb-3 flex-row items-center`}>
-        <Text
-          style={[
-            tw`text-sm text-gray-700`,
-            { fontFamily: 'Menlo', letterSpacing: 2 },
-          ]}
-        >
-          {data.group.access_code}
-        </Text>
-        {data.group.is_private ? (
-          <Text style={tw`ml-2 text-xs text-[#A68B6A]`}>· {t('chef.private')}</Text>
-        ) : null}
-      </View>
-
-      {/* Top section toggle: 菜单 / 愿望 */}
-      <View style={tw`px-4 pb-3 flex-row gap-2`}>
-        {(['menu', 'wishlist'] as const).map((k) => {
-          const active = k === tab;
-          return (
-            <Pressable
-              key={k}
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                setTab(k);
-              }}
-              style={tw.style(
-                'flex-1 py-2 rounded-full items-center',
-                active ? 'bg-gray-900' : 'bg-white border border-gray-200',
-              )}
-            >
-              <Text
-                style={tw.style(
-                  'text-xs font-medium',
-                  active ? 'text-white' : 'text-gray-700',
-                )}
-              >
-                {k === 'menu' ? t('chef.dishes') : t('chef.wishlist')}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {tab === 'wishlist' ? (
-        <ScrollView contentContainerStyle={tw`px-4 pb-32`}>
-          <WishlistSection groupId={groupId} canCompose={false} />
-        </ScrollView>
-      ) : (
-        <>
-      {/* Categories tabs */}
+    <View style={{ flex: 1, backgroundColor: palette.paper }}>
       <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={tw`px-4 pb-3 gap-2`}
+        contentContainerStyle={{
+          paddingTop: insets.top + 12,
+          paddingBottom: 120,
+        }}
+        showsVerticalScrollIndicator={false}
       >
-        {categories.map((c) => {
-          const active = c.id === activeCatId;
-          return (
-            <Pressable
-              key={c.id}
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                setSelectedCatId(c.id);
+        {/* Header */}
+        <View
+          style={{
+            paddingHorizontal: contentPadH,
+            paddingBottom: 8,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <Tappable feedback="press" onPress={() => router.back()}>
+            <SketchCircle size={r.scale(40, { min: 36, max: 48 })} seed={1}>
+              <ArrowLeft size={18} color={palette.ink} strokeWidth={1.5} />
+            </SketchCircle>
+          </Tappable>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
               }}
-              style={tw.style(
-                'rounded-full px-4 py-2 border',
-                active ? 'bg-gray-900 border-gray-900' : 'bg-white border-gray-200',
-              )}
             >
               <Text
-                style={tw.style(
-                  'text-xs font-medium',
-                  active ? 'text-white' : 'text-gray-700',
-                )}
+                style={{
+                  fontFamily: handFont,
+                  fontSize: r.fontScale(30, { min: 24, max: 36 }),
+                  color: palette.ink,
+                  lineHeight: r.fontScale(32, { min: 26, max: 38 }),
+                  flexShrink: 1,
+                }}
+                numberOfLines={1}
               >
-                {c.name}
+                {data.group.name}
               </Text>
-            </Pressable>
-          );
-        })}
-        <Pressable
-          onPress={() => setCategorySheet({ open: true, category: null })}
-          style={tw`rounded-full px-3 py-2 border border-dashed border-gray-300 flex-row items-center`}
+              {data.group.is_private ? (
+                <Lock size={16} color={palette.inkSoft} strokeWidth={1.5} />
+              ) : null}
+            </View>
+            <Text
+              style={{
+                fontFamily: uiFont,
+                fontSize: 12,
+                color: palette.inkMute,
+                letterSpacing: 2.5,
+                marginTop: 2,
+              }}
+            >
+              {data.group.access_code} · 长按复制
+            </Text>
+          </View>
+          <Tappable
+            feedback="press"
+            onPress={() => {
+              Haptics.selectionAsync().catch(() => {});
+              router.push({
+                pathname: '/diner/group/[id]',
+                params: { id: groupId, preview: '1' },
+              } as any);
+            }}
+          >
+            <SketchPill seed={20} style={{ paddingTop: 4, paddingBottom: 4 }}>
+              <Eye size={12} color={palette.ink} strokeWidth={1.5} />
+              <Text style={{ fontFamily: handFont, fontSize: 12, color: palette.ink }}>
+                预览
+              </Text>
+            </SketchPill>
+          </Tappable>
+        </View>
+
+        {/* Tab toggle */}
+        <View
+          style={{
+            paddingHorizontal: contentPadH,
+            marginTop: 12,
+            flexDirection: 'row',
+            gap: 8,
+          }}
         >
-          <Plus size={12} color="#737373" />
-          <Text style={tw`ml-1 text-xs text-gray-600`}>{t('chef.addCategory')}</Text>
-        </Pressable>
+          <Tappable feedback="press" onPress={() => setTab('menu')}>
+            <SketchPill active={tab === 'menu'} seed={2}>
+              <Text
+                style={{
+                  fontFamily: handFont,
+                  fontSize: 16,
+                  color: palette.ink,
+                  fontWeight: tab === 'menu' ? '700' : '400',
+                }}
+              >
+                菜品 · {totalDishCount}
+              </Text>
+            </SketchPill>
+          </Tappable>
+          <Tappable feedback="press" onPress={() => setTab('wishlist')}>
+            <SketchPill active={tab === 'wishlist'} seed={3}>
+              <Text
+                style={{
+                  fontFamily: handFont,
+                  fontSize: 16,
+                  color: palette.ink,
+                  fontWeight: tab === 'wishlist' ? '700' : '400',
+                }}
+              >
+                ✶ 愿望清单{wishlistCount > 0 ? ` · ${wishlistCount}` : ''}
+              </Text>
+            </SketchPill>
+          </Tappable>
+        </View>
+
+        {tab === 'wishlist' ? (
+          <View style={{ paddingHorizontal: contentPadH, paddingTop: 16 }}>
+            <WishlistSection groupId={groupId} canCompose={false} />
+          </View>
+        ) : (
+          <>
+            {/* Categories */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: contentPadH, gap: 8, marginTop: 16 }}
+            >
+              {categories.map((c, i) => (
+                <Tappable
+                  key={c.id}
+                  feedback="press"
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setSelectedCatId(c.id);
+                  }}
+                  onLongPress={() =>
+                    setCategorySheet({ open: true, category: c })
+                  }
+                >
+                  <SketchPill active={c.id === activeCatId} seed={i + 4}>
+                    <Text
+                      style={{
+                        fontFamily: handFont,
+                        fontSize: 14,
+                        color: palette.ink,
+                        fontWeight: c.id === activeCatId ? '700' : '400',
+                      }}
+                    >
+                      {c.name}
+                    </Text>
+                  </SketchPill>
+                </Tappable>
+              ))}
+              <Tappable
+                feedback="press"
+                onPress={() => setCategorySheet({ open: true, category: null })}
+              >
+                <SketchPill seed={9}>
+                  <Plus size={12} color={palette.ink} strokeWidth={1.5} />
+                  <Text style={{ fontFamily: handFont, fontSize: 14, color: palette.ink }}>
+                    添加分类
+                  </Text>
+                </SketchPill>
+              </Tappable>
+            </ScrollView>
+
+            {/* Active category controls */}
+            {activeCat ? (
+              <View
+                style={{
+                  paddingHorizontal: contentPadH,
+                  marginTop: 10,
+                  flexDirection: 'row',
+                  gap: 8,
+                }}
+              >
+                <Tappable
+                  feedback="press"
+                  onPress={() => setCategorySheet({ open: true, category: activeCat })}
+                >
+                  <SketchPill seed={30} style={{ paddingTop: 3, paddingBottom: 3 }}>
+                    <Pencil size={11} color={palette.ink} strokeWidth={1.5} />
+                    <Text style={{ fontFamily: handFont, fontSize: 12, color: palette.ink }}>
+                      {t('common.edit')}
+                    </Text>
+                  </SketchPill>
+                </Tappable>
+                <Tappable feedback="press" onPress={() => setDeletingCategory(activeCat)}>
+                  <SketchPill
+                    seed={31}
+                    color="#A30000"
+                    style={{ paddingTop: 3, paddingBottom: 3 }}
+                  >
+                    <Trash2 size={11} color="#A30000" strokeWidth={1.5} />
+                    <Text style={{ fontFamily: handFont, fontSize: 12, color: '#A30000' }}>
+                      {t('common.delete')}
+                    </Text>
+                  </SketchPill>
+                </Tappable>
+              </View>
+            ) : null}
+
+            {/* Dishes grid (2 col phone, 3 col tablet) */}
+            <View style={{ paddingHorizontal: contentPadH, marginTop: 16 }}>
+              {!activeCatId ? (
+                <EmptyState title={t('chef.noCategoriesYet')} />
+              ) : visibleDishes.length === 0 ? (
+                <View style={{ paddingTop: 12 }}>
+                  <Text
+                    style={{
+                      fontFamily: handFont,
+                      fontSize: 18,
+                      color: palette.inkSoft,
+                      textAlign: 'center',
+                    }}
+                  >
+                    还没有菜品
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: noteFont,
+                      fontSize: 12,
+                      color: palette.inkMute,
+                      textAlign: 'center',
+                      marginTop: 4,
+                    }}
+                  >
+                    点下方"添加菜品"开始
+                  </Text>
+                </View>
+              ) : (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    gap: 12,
+                  }}
+                >
+                  {visibleDishes.map((d, i) => (
+                    <View key={d.id} style={{ width: dishColWidth }}>
+                      <DishCard
+                        dish={d}
+                        index={i}
+                        onEdit={() =>
+                          setDishSheet({
+                            open: true,
+                            dish: d,
+                            mode: 'manual',
+                            prefill: null,
+                          })
+                        }
+                        onDelete={() => setDeletingDish(d)}
+                        onRetry={
+                          d.extract_status === 'error'
+                            ? () => retry.mutate({ dishId: d.id, groupId })
+                            : undefined
+                        }
+                      />
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </>
+        )}
       </ScrollView>
 
-      {/* Active-category controls (always visible) */}
-      {activeCat ? (
-        <View style={tw`px-4 pb-2 flex-row gap-2`}>
-          <Pressable
-            onPress={() => setCategorySheet({ open: true, category: activeCat })}
-            style={tw`flex-row items-center px-3 py-1.5 rounded-full bg-gray-100`}
+      {/* Sticky CTA */}
+      {tab === 'menu' && activeCatId ? (
+        <View
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 10,
+          }}
+          pointerEvents="box-none"
+        >
+          <LinearGradient
+            colors={['rgba(255,255,255,0)', '#FFFFFF']}
+            locations={[0, 0.4]}
+            style={{
+              paddingTop: 12,
+              paddingBottom: insets.bottom + 16,
+              paddingHorizontal: contentPadH,
+            }}
           >
-            <Pencil size={11} color="#525252" />
-            <Text style={tw`ml-1 text-[11px] text-gray-700`}>{t('common.edit')}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setDeletingCategory(activeCat)}
-            style={tw`flex-row items-center px-3 py-1.5 rounded-full bg-red-50`}
-          >
-            <Trash2 size={11} color="#A30000" />
-            <Text style={tw`ml-1 text-[11px] text-red-700`}>{t('common.delete')}</Text>
-          </Pressable>
+            <Tappable feedback="press" onPress={() => setMethodPickerOpen(true)}>
+              <SketchBox
+                radius={999}
+                seed={8}
+                strokeWidth={2}
+                fillColor={palette.paper}
+                style={{ paddingVertical: 12 }}
+              >
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <Plus size={20} color={palette.ink} strokeWidth={1.6} />
+                  <Text
+                    style={{
+                      fontFamily: handFont,
+                      fontSize: 22,
+                      color: palette.ink,
+                      fontWeight: '700',
+                    }}
+                  >
+                    添加菜品
+                  </Text>
+                </View>
+              </SketchBox>
+            </Tappable>
+          </LinearGradient>
         </View>
       ) : null}
-
-      {/* Dishes list */}
-      <ScrollView contentContainerStyle={tw`px-4 pb-32 gap-3`}>
-        {!activeCatId ? (
-          <EmptyState title={t('chef.noCategoriesYet')} />
-        ) : visibleDishes.length === 0 ? (
-          <EmptyState title={t('discover.noPublicDishesYet')} />
-        ) : (
-          visibleDishes.map((d) => (
-            <DishCard
-              key={d.id}
-              dish={d}
-              onEdit={() =>
-                setDishSheet({ open: true, dish: d, mode: 'manual', prefill: null })
-              }
-              onDelete={() => setDeletingDish(d)}
-              onRetry={
-                d.extract_status === 'error'
-                  ? () => {
-                      retry.mutate({ dishId: d.id, groupId });
-                    }
-                  : undefined
-              }
-            />
-          ))
-        )}
-
-        {activeCatId ? (
-          <Pressable
-            onPress={() => setMethodPickerOpen(true)}
-            style={({ pressed }) => [
-              tw`flex-row items-center justify-center bg-white border border-dashed border-gray-300 rounded-xl py-4`,
-              { opacity: pressed ? 0.6 : 1 },
-            ]}
-          >
-            <Plus size={14} color="#737373" />
-            <Text style={tw`ml-2 text-xs text-gray-600`}>{t('chef.addDish')}</Text>
-          </Pressable>
-        ) : null}
-      </ScrollView>
-        </>
-      )}
 
       <CategorySheet
         visible={categorySheet.open}
@@ -310,15 +483,15 @@ export default function ChefGroupDetails() {
       />
       <DishSheet
         visible={dishSheet.open}
-        onClose={() => setDishSheet({ open: false, dish: null, mode: 'manual', prefill: null })}
+        onClose={() =>
+          setDishSheet({ open: false, dish: null, mode: 'manual', prefill: null })
+        }
         groupId={groupId}
         categoryId={activeCatId}
         dish={dishSheet.dish}
         mode={dishSheet.mode}
         prefill={dishSheet.prefill}
       />
-
-      {/* + 添加菜品 → 弹方式选择 sheet */}
       <AddDishMethodSheet
         visible={methodPickerOpen}
         onClose={() => setMethodPickerOpen(false)}
@@ -330,7 +503,6 @@ export default function ChefGroupDetails() {
           else setSmartFillStandaloneOpen(true);
         }}
       />
-
       <AILimitSheet
         visible={aiLimitOpen}
         onClose={() => setAiLimitOpen(false)}
@@ -338,8 +510,6 @@ export default function ChefGroupDetails() {
           setDishSheet({ open: true, dish: null, mode: 'manual', prefill: null })
         }
       />
-
-      {/* AI 整理路径:非阻塞 — 提交后立刻关闭,占位卡通过 realtime 推到列表 */}
       <SmartFillSheet
         visible={smartFillStandaloneOpen}
         onClose={() => setSmartFillStandaloneOpen(false)}
@@ -370,6 +540,6 @@ export default function ChefGroupDetails() {
         destructive
         loading={delDish.isPending}
       />
-    </AppContainer>
+    </View>
   );
 }

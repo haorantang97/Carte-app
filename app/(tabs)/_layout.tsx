@@ -1,41 +1,20 @@
 import { Tabs } from 'expo-router';
-import { ChefHat, ScrollText } from 'lucide-react-native';
-import { useTranslation } from 'react-i18next';
-import { BOTTOM_NAV_HEIGHT, BRAND } from '@/lib/constants';
 
+/**
+ * Tabs layout — but the visible tab bar is rendered inside each screen via
+ * <SketchBottomTabs /> to match the Vite prototype's sticky sketch-pill
+ * design. We simply hide the default expo-router tab bar here.
+ */
 export default function TabsLayout() {
-  const { t } = useTranslation();
-
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: BRAND.textPrimary,
-        tabBarInactiveTintColor: '#A3A3A3',
-        tabBarStyle: {
-          backgroundColor: BRAND.background,
-          borderTopColor: BRAND.border,
-          height: BOTTOM_NAV_HEIGHT + 16,
-          paddingTop: 6,
-          paddingBottom: 12,
-        },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
+        tabBarStyle: { display: 'none' },
       }}
     >
-      <Tabs.Screen
-        name="kitchen"
-        options={{
-          title: t('chef.myMenuGroups'),
-          tabBarIcon: ({ color, size }) => <ChefHat size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="orders"
-        options={{
-          title: t('chef.activeOrders'),
-          tabBarIcon: ({ color, size }) => <ScrollText size={size} color={color} />,
-        }}
-      />
+      <Tabs.Screen name="kitchen" />
+      <Tabs.Screen name="orders" />
     </Tabs>
   );
 }

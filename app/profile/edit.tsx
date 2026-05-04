@@ -3,37 +3,53 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
-import { Camera, Sparkles, User } from 'lucide-react-native';
+import { ArrowLeft, Pencil, Sparkles } from 'lucide-react-native';
 import { router } from 'expo-router';
-import { AppContainer } from '@/components/ui/AppContainer';
-import { BackButton } from '@/components/ui/BackButton';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Tappable } from '@/components/ui/Tappable';
 import { showToast } from '@/components/ui/Toast';
 import { useProfile, useUpdateProfile } from '@/hooks/auth/useProfile';
 import { usePickAndUploadImage } from '@/hooks/storage/useImageUpload';
 import { useAiQuota } from '@/hooks/useAiQuota';
-import { SketchBox, SketchPill } from '@/components/ui/sketch';
-import tw from '@/lib/tw';
+import { useMyCartes } from '@/hooks/carte/useMyCartes';
+import {
+  SketchBox,
+  SketchCircle,
+  SketchPill,
+  SketchUnderline,
+  SketchPhotoCircle,
+} from '@/components/ui/sketch';
+import { palette, handFont, noteFont, titleFont } from '@/lib/palette';
+import { useResponsive } from '@/lib/responsive';
 
 export default function ProfileEdit() {
+  const insets = useSafeAreaInsets();
+  const r = useResponsive();
+  const contentPadH = r.isTablet
+    ? Math.max(28, (r.width - r.contentMaxWidth) / 2)
+    : r.scale(20, { min: 14, max: 28 });
+  const innerPadH = r.isTablet
+    ? Math.max(32, (r.width - r.contentMaxWidth) / 2 + 4)
+    : r.scale(24, { min: 16, max: 32 });
   const { t } = useTranslation();
   const { data: profile, isLoading } = useProfile();
   const update = useUpdateProfile();
   const upload = usePickAndUploadImage('avatars', { square: true });
   const ai = useAiQuota();
   const aiPct = Math.min(100, Math.round((ai.used / ai.limit) * 100));
+  const { data: cartes } = useMyCartes();
 
   const [username, setUsername] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [editingUsername, setEditingUsername] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -75,113 +91,368 @@ export default function ProfileEdit() {
 
   if (isLoading) {
     return (
-      <AppContainer>
-        <View style={tw`flex-1 items-center justify-center`}>
-          <ActivityIndicator size="small" color="#737373" />
-        </View>
-      </AppContainer>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: palette.paper,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <ActivityIndicator size="small" color={palette.inkSoft} />
+      </View>
     );
   }
 
-  return (
-    <AppContainer>
-      <View style={tw`flex-row items-center px-4 pt-1 pb-3`}>
-        <BackButton />
-        <Text style={tw`flex-1 ml-2 text-xl font-semibold text-gray-900`}>
-          {t('profile.editProfile')}
-        </Text>
-      </View>
+  const myCartes = (cartes ?? []).filter((c) => c.is_mine).length;
 
+  return (
+    <View style={{ flex: 1, backgroundColor: palette.paper }}>
       <KeyboardAvoidingView
-        style={tw`flex-1`}
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={tw`px-4 pb-32`}>
-          {/* Avatar */}
-          <View style={tw`items-center py-6`}>
-            <Pressable
-              onPress={onPickAvatar}
-              disabled={upload.isPending}
-              style={({ pressed }) => [
-                tw`w-28 h-28 rounded-full bg-gray-100 items-center justify-center overflow-hidden`,
-                { opacity: pressed ? 0.7 : 1 },
-              ]}
+        <ScrollView
+          contentContainerStyle={{
+            paddingTop: insets.top + 12,
+            paddingBottom: insets.bottom + 100,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View
+            style={{
+              paddingHorizontal: contentPadH,
+              paddingBottom: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+            }}
+          >
+            <Tappable feedback="press" onPress={() => router.back()}>
+              <SketchCircle size={r.scale(40, { min: 36, max: 48 })} seed={1}>
+                <ArrowLeft size={18} color={palette.ink} strokeWidth={1.5} />
+              </SketchCircle>
+            </Tappable>
+            <Text
+              style={{
+                fontFamily: handFont,
+                fontSize: r.fontScale(26, { min: 22, max: 30 }),
+                color: palette.ink,
+                lineHeight: r.fontScale(26, { min: 22, max: 30 }),
+              }}
             >
-              {avatarUrl ? (
-                <Image source={{ uri: avatarUrl }} style={tw`w-28 h-28`} contentFit="cover" />
-              ) : (
-                <User size={36} color="#A3A3A3" strokeWidth={1.5} />
-              )}
+              编辑资料
+            </Text>
+          </View>
+
+          {/* Avatar */}
+          <View style={{ marginTop: 20, alignItems: 'center' }}>
+            <View style={{ position: 'relative' }}>
+              <Tappable feedback="press" onPress={onPickAvatar} disabled={upload.isPending}>
+                <SketchPhotoCircle
+                  src={avatarUrl}
+                  size={r.scale(140, { min: 110, max: 180 })}
+                  seed={2}
+                />
+              </Tappable>
               <View
-                style={tw`absolute bottom-0 right-0 w-9 h-9 rounded-full bg-gray-900 items-center justify-center border-2 border-white`}
+                style={{
+                  position: 'absolute',
+                  bottom: 4,
+                  right: 4,
+                  backgroundColor: palette.paper,
+                  borderRadius: 999,
+                  padding: 3,
+                }}
               >
-                {upload.isPending ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <Camera size={14} color="white" />
-                )}
+                <Tappable feedback="press" onPress={onPickAvatar}>
+                  <SketchCircle size={r.scale(36, { min: 32, max: 44 })} seed={3}>
+                    {upload.isPending ? (
+                      <ActivityIndicator size="small" color={palette.ink} />
+                    ) : (
+                      <Pencil size={16} color={palette.ink} strokeWidth={1.5} />
+                    )}
+                  </SketchCircle>
+                </Tappable>
               </View>
-            </Pressable>
-            <Text style={tw`mt-3 text-xs text-gray-500`}>{t('profile.tapToChangeAvatar')}</Text>
+            </View>
+            <Text
+              style={{
+                marginTop: 12,
+                fontFamily: noteFont,
+                fontSize: 13,
+                color: palette.inkMute,
+              }}
+            >
+              点头像更换
+            </Text>
           </View>
 
-          {/* Username */}
-          <View style={tw`gap-3`}>
-            <Input
-              label={t('profile.username')}
-              value={username}
-              onChangeText={setUsername}
-              maxLength={30}
-              autoCapitalize="none"
-            />
+          {/* Username field */}
+          <View style={{ paddingHorizontal: innerPadH, marginTop: 32 }}>
+            <Text
+              style={{
+                fontFamily: handFont,
+                fontSize: 18,
+                color: palette.ink,
+                lineHeight: 18,
+              }}
+            >
+              用户名
+            </Text>
+            <SketchUnderline width={50} seed={4} color={palette.ink} />
+            <Tappable
+              feedback="press"
+              onPress={() => setEditingUsername(true)}
+              haptic={false}
+            >
+              <SketchBox
+                radius={12}
+                seed={5}
+                fillColor={palette.paper}
+                style={{ paddingHorizontal: 16, paddingVertical: 14, marginTop: 12 }}
+              >
+                {editingUsername ? (
+                  <TextInput
+                    value={username}
+                    onChangeText={setUsername}
+                    onBlur={() => setEditingUsername(false)}
+                    autoFocus
+                    maxLength={30}
+                    autoCapitalize="none"
+                    placeholder={t('profile.username')}
+                    placeholderTextColor={palette.inkMute}
+                    style={{
+                      fontFamily: handFont,
+                      fontSize: 22,
+                      color: palette.ink,
+                      lineHeight: 24,
+                      padding: 0,
+                    }}
+                  />
+                ) : (
+                  <Text
+                    style={{
+                      fontFamily: handFont,
+                      fontSize: 22,
+                      color: username ? palette.ink : palette.inkMute,
+                      lineHeight: 24,
+                    }}
+                  >
+                    {username || t('profile.username')}
+                  </Text>
+                )}
+              </SketchBox>
+            </Tappable>
+            <Text
+              style={{
+                marginTop: 8,
+                fontFamily: noteFont,
+                fontSize: 12,
+                color: palette.inkMute,
+                lineHeight: 18,
+              }}
+            >
+              会显示给加入你 carte 的 diners、以及你下单的 chef
+            </Text>
           </View>
 
-          {/* AI 用量 — atmospheric, no on-card noise; full detail lives here. */}
-          <View style={tw`mt-7`}>
-            <Text style={tw`text-base text-gray-900 mb-2`}>AI 用量</Text>
-            <SketchBox seed={11} radius={14} style={tw`p-4`}>
-              <View style={tw`flex-row items-center justify-between`}>
-                <View style={tw`flex-row items-center`}>
-                  <Sparkles size={16} color="#171717" strokeWidth={1.5} />
-                  <Text style={tw`ml-2 text-base text-gray-900`}>本月已用</Text>
+          {/* Stats */}
+          <View
+            style={{
+              paddingHorizontal: innerPadH,
+              marginTop: 32,
+              flexDirection: 'row',
+              gap: 12,
+            }}
+          >
+            {[
+              { n: String(myCartes), l: '我的 cartes' },
+              {
+                n: String((cartes ?? []).filter((c) => !c.is_mine).length),
+                l: '加入的',
+              },
+              { n: String(ai.used), l: '本月 AI' },
+            ].map((s, i) => (
+              <View key={i} style={{ flex: 1 }}>
+                <SketchBox
+                  radius={12}
+                  seed={i + 6}
+                  fillColor={palette.paper}
+                  style={{ paddingVertical: 12 }}
+                >
+                  <Text
+                    style={{
+                      textAlign: 'center',
+                      fontFamily: handFont,
+                      fontSize: 26,
+                      color: palette.ink,
+                      lineHeight: 26,
+                      fontWeight: '700',
+                    }}
+                  >
+                    {s.n}
+                  </Text>
+                  <Text
+                    style={{
+                      textAlign: 'center',
+                      fontFamily: noteFont,
+                      fontSize: 11,
+                      color: palette.inkSoft,
+                      marginTop: 4,
+                    }}
+                  >
+                    {s.l}
+                  </Text>
+                </SketchBox>
+              </View>
+            ))}
+          </View>
+
+          {/* AI usage */}
+          <View style={{ paddingHorizontal: innerPadH, marginTop: 32 }}>
+            <Text
+              style={{
+                fontFamily: handFont,
+                fontSize: 18,
+                color: palette.ink,
+                lineHeight: 18,
+              }}
+            >
+              AI 用量
+            </Text>
+            <SketchUnderline width={50} seed={10} color={palette.ink} />
+            <SketchBox
+              radius={14}
+              seed={11}
+              fillColor={palette.paper}
+              style={{ paddingHorizontal: 16, paddingVertical: 14, marginTop: 12 }}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'baseline',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                >
+                  <Sparkles size={16} color={palette.ink} strokeWidth={1.5} />
+                  <Text
+                    style={{
+                      fontFamily: handFont,
+                      fontSize: 18,
+                      color: palette.ink,
+                    }}
+                  >
+                    本月已用
+                  </Text>
                 </View>
-                <Text style={tw`text-xl text-gray-900`}>
-                  <Text style={tw`font-bold`}>{ai.used}</Text>
-                  <Text style={tw`text-gray-400`}> / {ai.limit}</Text>
+                <Text
+                  style={{
+                    fontFamily: titleFont,
+                    fontStyle: 'italic',
+                    fontSize: 22,
+                    color: palette.ink,
+                    fontWeight: '700',
+                  }}
+                >
+                  {ai.used}
+                  <Text style={{ fontSize: 14, color: palette.inkSoft }}>
+                    {' '}
+                    / {ai.limit}
+                  </Text>
                 </Text>
               </View>
-              {/* progress */}
-              <View style={tw`mt-3 h-1.5 rounded-full bg-gray-100 overflow-hidden`}>
+              <View
+                style={{
+                  marginTop: 12,
+                  height: 5,
+                  backgroundColor: palette.inkPale,
+                  borderRadius: 999,
+                  overflow: 'hidden',
+                }}
+              >
                 <View
-                  style={[tw`h-full bg-gray-900 rounded-full`, { width: `${aiPct}%` }]}
+                  style={{
+                    width: `${aiPct}%`,
+                    height: '100%',
+                    backgroundColor: palette.ink,
+                  }}
                 />
               </View>
-              <Pressable
+              <Tappable
+                feedback="press"
                 onPress={() => showToast.info('升级 Pro 即将上线')}
-                style={({ pressed }) => [
-                  tw`mt-3 flex-row items-center justify-between`,
-                  { opacity: pressed ? 0.7 : 1 },
-                ]}
               >
-                <Text style={tw`text-xs text-gray-500`}>升级 Pro 解除上限</Text>
-                <SketchPill seed={13} style={{ paddingTop: 2, paddingBottom: 2 }}>
-                  <Text style={tw`text-xs font-bold text-gray-900`}>Pro →</Text>
-                </SketchPill>
-              </Pressable>
+                <View
+                  style={{
+                    marginTop: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: noteFont,
+                      fontSize: 12,
+                      color: palette.inkSoft,
+                    }}
+                  >
+                    升级 Pro 解除上限
+                  </Text>
+                  <SketchPill seed={12} style={{ paddingTop: 3, paddingBottom: 3 }}>
+                    <Text
+                      style={{
+                        fontFamily: handFont,
+                        fontSize: 12,
+                        color: palette.ink,
+                      }}
+                    >
+                      Pro →
+                    </Text>
+                  </SketchPill>
+                </View>
+              </Tappable>
             </SketchBox>
           </View>
         </ScrollView>
 
         {/* Save bar */}
-        <View style={tw`px-4 pb-4 pt-2 bg-bg border-t border-gray-200`}>
-          <Button
-            label={t('common.save')}
-            fullWidth
-            loading={submitting}
-            onPress={onSave}
-          />
+        <View
+          style={{
+            paddingHorizontal: contentPadH,
+            paddingTop: 12,
+            paddingBottom: insets.bottom + 12,
+            backgroundColor: palette.paper,
+          }}
+        >
+          <Tappable feedback="press" onPress={onSave} disabled={submitting}>
+            <SketchBox
+              radius={999}
+              seed={9}
+              strokeWidth={2}
+              fillColor={palette.paper}
+              style={{ paddingVertical: 14 }}
+            >
+              <Text
+                style={{
+                  textAlign: 'center',
+                  fontFamily: handFont,
+                  fontSize: 22,
+                  color: palette.ink,
+                  fontWeight: '700',
+                }}
+              >
+                {submitting ? '保存中…' : '保存'}
+              </Text>
+            </SketchBox>
+          </Tappable>
         </View>
       </KeyboardAvoidingView>
-    </AppContainer>
+    </View>
   );
 }

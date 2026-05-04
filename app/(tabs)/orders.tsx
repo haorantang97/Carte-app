@@ -1,30 +1,38 @@
 import { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { MessageSquare, ThumbsUp, User } from 'lucide-react-native';
+import { ThumbsUp, User } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppContainer } from '@/components/ui/AppContainer';
+import { Tappable } from '@/components/ui/Tappable';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { showToast } from '@/components/ui/Toast';
-import { OrderListItem } from '@/components/orders/OrderListItem';
-import { SketchBox, SketchPill, SketchUnderline } from '@/components/ui/sketch';
-import { useChefOrders, useDeleteOrder, useUpdateOrderStatus, nextStatus } from '@/hooks/chef/useChefOrders';
+import { SketchBottomTabs } from '@/components/ui/SketchBottomTabs';
+import {
+  SketchBox,
+  SketchPill,
+  SketchUnderline,
+  SketchPhoto,
+  SketchPhotoCircle,
+} from '@/components/ui/sketch';
+
+import {
+  useChefOrders,
+  useDeleteOrder,
+  useUpdateOrderStatus,
+  nextStatus,
+} from '@/hooks/chef/useChefOrders';
 import { useChefOrderHistory } from '@/hooks/chef/useChefOrderHistory';
 import { useChefRecentComments } from '@/hooks/dish/useChefRecentComments';
 import { useChefWishlists } from '@/hooks/wishlist/useChefWishlists';
 import { useMenuGroups } from '@/hooks/chef/useMenuGroups';
 import { useRealtimeOrders } from '@/hooks/realtime/useRealtimeOrders';
+
+import { palette, handFont, noteFont, titleFont } from '@/lib/palette';
+import { useResponsive } from '@/lib/responsive';
 import type { OrderStatus } from '@/types/domain';
-import tw from '@/lib/tw';
 
 type Section = 'orders' | 'wishlist' | 'feedback' | 'history';
 
@@ -37,7 +45,42 @@ const SECTIONS: { key: Section; label: string }[] = [
 
 const ALL_CARTE = '__all__';
 
+function statusLabel(s: OrderStatus): string {
+  switch (s) {
+    case 'pending':
+      return '待开始';
+    case 'preparing':
+      return '制作中';
+    case 'ready':
+      return '可取';
+    case 'completed':
+      return '已完成';
+    case 'cancelled':
+      return '已取消';
+    default:
+      return s;
+  }
+}
+
+function nextStatusLabel(s: OrderStatus): string {
+  switch (s) {
+    case 'preparing':
+      return '开始制作';
+    case 'ready':
+      return '可取';
+    case 'completed':
+      return '完成';
+    default:
+      return '推进';
+  }
+}
+
 export default function OrdersTab() {
+  const insets = useSafeAreaInsets();
+  const r = useResponsive();
+  const contentPadH = r.isTablet
+    ? Math.max(24, (r.width - r.contentMaxWidth) / 2)
+    : r.scale(20, { min: 14, max: 28 });
   const [section, setSection] = useState<Section>('orders');
   const [carteFilter, setCarteFilter] = useState<string>(ALL_CARTE);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -75,7 +118,6 @@ export default function OrdersTab() {
     }
   };
 
-  // Apply carte filter to whichever section is active.
   const filteredOrders = useMemo(
     () =>
       (orders.data ?? []).filter(
@@ -117,194 +159,400 @@ export default function OrdersTab() {
           : history.isLoading;
 
   return (
-    <AppContainer bottomInset={false}>
-      {/* Header */}
-      <View style={tw`px-4 pt-3 pb-1`}>
-        <Text style={tw`text-3xl text-gray-900`}>后厨</Text>
-        <SketchUnderline width={70} seed={1} />
-      </View>
-
-      {/* Section sub-tabs */}
+    <View style={{ flex: 1, backgroundColor: palette.paper }}>
       <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={tw`px-4 mt-2 gap-2`}
+        contentContainerStyle={{
+          paddingTop: insets.top + 16,
+          paddingBottom: 140,
+        }}
+        showsVerticalScrollIndicator={false}
       >
-        {SECTIONS.map((s, i) => (
-          <SketchPill
-            key={s.key}
-            active={section === s.key}
-            seed={i + 2}
-            onPress={() => {
-              Haptics.selectionAsync().catch(() => {});
-              setSection(s.key);
+        {/* Header */}
+        <View style={{ paddingHorizontal: contentPadH, paddingBottom: 8 }}>
+          <Text
+            style={{
+              fontFamily: handFont,
+              fontSize: r.fontScale(36, { min: 30, max: 42 }),
+              color: palette.ink,
+              lineHeight: r.fontScale(36, { min: 30, max: 42 }),
             }}
           >
-            {s.label}
-          </SketchPill>
-        ))}
-      </ScrollView>
-
-      {/* Carte filter chip row */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={tw`px-4 mt-2 gap-2`}
-      >
-        <SketchPill
-          active={carteFilter === ALL_CARTE}
-          seed={11}
-          onPress={() => setCarteFilter(ALL_CARTE)}
-          style={{ paddingTop: 3, paddingBottom: 3 }}
-        >
-          <Text
-            style={[
-              tw`text-xs`,
-              { fontWeight: carteFilter === ALL_CARTE ? '700' : '400', color: '#171717' },
-            ]}
-          >
-            全部 carte
+            后厨
           </Text>
-        </SketchPill>
-        {(groups.data ?? []).map((g, i) => (
-          <SketchPill
-            key={g.id}
-            active={carteFilter === g.id}
-            seed={i + 13}
-            onPress={() => setCarteFilter(g.id)}
-            style={{ paddingTop: 3, paddingBottom: 3 }}
-          >
-            <Text
-              style={[
-                tw`text-xs`,
-                { fontWeight: carteFilter === g.id ? '700' : '400', color: '#171717' },
-              ]}
-            >
-              {g.name}
-            </Text>
-          </SketchPill>
-        ))}
-      </ScrollView>
-
-      {/* Body */}
-      {isLoading ? (
-        <View style={tw`flex-1 items-center justify-center`}>
-          <ActivityIndicator size="small" color="#737373" />
+          <SketchUnderline
+            width={r.scale(70, { min: 60, max: 84 })}
+            seed={1}
+            color={palette.ink}
+          />
         </View>
-      ) : section === 'orders' ? (
-        filteredOrders.length === 0 ? (
-          <EmptyState title="暂无活跃订单" />
-        ) : (
-          <ScrollView contentContainerStyle={tw`px-4 mt-3 pb-20 gap-2`}>
-            {filteredOrders.map((o) => {
-              const next = nextStatus(o.status);
-              return (
-                <OrderListItem
-                  key={o.id}
-                  status={o.status}
-                  dishName={o.dish_name}
-                  dishImageUrl={o.dish_image_url}
-                  quantity={o.quantity}
-                  price={o.price_at_order}
-                  groupName={o.group_name}
-                  partyLabel={o.diner_username}
-                  createdAt={o.created_at}
-                  ingredients={o.dish_ingredients}
-                  onAdvance={
-                    next
-                      ? { label: nextStatusLabel(next), onPress: () => onAdvance(o.id, next) }
-                      : null
-                  }
-                  onDelete={() => setDeletingId(o.id)}
-                />
-              );
-            })}
-          </ScrollView>
-        )
-      ) : section === 'wishlist' ? (
-        filteredWishlist.length === 0 ? (
-          <EmptyState title="还没有 diner 投愿望" />
-        ) : (
-          <ScrollView contentContainerStyle={tw`px-4 mt-3 pb-20 gap-2`}>
-            {filteredWishlist.map((w, i) => (
-              <SketchBox key={w.id} seed={i + 4} radius={16} style={tw`p-3.5 flex-row items-center`}>
-                <SketchPill seed={i + 9} style={{ paddingTop: 4, paddingBottom: 4 }}>
-                  <ThumbsUp size={12} color="#171717" strokeWidth={1.5} />
-                  <Text style={tw`text-sm text-gray-900 ml-1`}>{w.votes}</Text>
-                </SketchPill>
-                <View style={tw`flex-1 ml-3`}>
-                  <Text style={tw`text-base text-gray-900`} numberOfLines={1}>
-                    {w.content}
-                  </Text>
-                  <Text style={tw`text-xs text-gray-500 mt-0.5`} numberOfLines={1}>
-                    {w.requester_username} · {w.group_name}
-                  </Text>
-                </View>
-              </SketchBox>
-            ))}
-          </ScrollView>
-        )
-      ) : section === 'feedback' ? (
-        filteredFeedback.length === 0 ? (
-          <EmptyState title="还没有 diner 留言" />
-        ) : (
-          <ScrollView contentContainerStyle={tw`px-4 mt-3 pb-20 gap-2`}>
-            {filteredFeedback.map((c, i) => (
-              <Pressable
-                key={c.id}
-                onPress={() => router.push(`/dish/${c.dish_id}` as any)}
-                style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
+
+        {/* Section sub-tabs */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: contentPadH, gap: 8, marginTop: 12 }}
+        >
+          {SECTIONS.map((s, i) => (
+            <Tappable
+              key={s.key}
+              feedback="press"
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => {});
+                setSection(s.key);
+              }}
+            >
+              <SketchPill active={section === s.key} seed={i + 2}>
+                <Text
+                  style={{
+                    fontFamily: handFont,
+                    fontSize: 15,
+                    color: palette.ink,
+                    fontWeight: section === s.key ? '700' : '400',
+                  }}
+                >
+                  {s.label}
+                </Text>
+              </SketchPill>
+            </Tappable>
+          ))}
+        </ScrollView>
+
+        {/* Carte filter chip row */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: contentPadH, gap: 8, marginTop: 8 }}
+        >
+          <Tappable feedback="press" onPress={() => setCarteFilter(ALL_CARTE)}>
+            <SketchPill
+              active={carteFilter === ALL_CARTE}
+              seed={11}
+              style={{ paddingTop: 3, paddingBottom: 3 }}
+            >
+              <Text
+                style={{
+                  fontFamily: handFont,
+                  fontSize: 12,
+                  color: palette.ink,
+                  fontWeight: carteFilter === ALL_CARTE ? '700' : '400',
+                }}
               >
-                <SketchBox seed={i + 4} radius={16} style={tw`p-3.5 flex-row`}>
-                  {c.avatar_url ? (
-                    <Image
-                      source={{ uri: c.avatar_url }}
-                      style={tw`w-10 h-10 rounded-full bg-gray-100`}
-                    />
-                  ) : (
-                    <View style={tw`w-10 h-10 rounded-full bg-gray-100 items-center justify-center`}>
-                      <User size={16} color="#737373" />
+                全部 carte
+              </Text>
+            </SketchPill>
+          </Tappable>
+          {(groups.data ?? []).map((g, i) => (
+            <Tappable key={g.id} feedback="press" onPress={() => setCarteFilter(g.id)}>
+              <SketchPill
+                active={carteFilter === g.id}
+                seed={i + 13}
+                style={{ paddingTop: 3, paddingBottom: 3 }}
+              >
+                <Text
+                  style={{
+                    fontFamily: handFont,
+                    fontSize: 12,
+                    color: palette.ink,
+                    fontWeight: carteFilter === g.id ? '700' : '400',
+                  }}
+                >
+                  {g.name}
+                </Text>
+              </SketchPill>
+            </Tappable>
+          ))}
+        </ScrollView>
+
+        {/* Body */}
+        <View style={{ paddingHorizontal: contentPadH, marginTop: 16, gap: 12 }}>
+          {isLoading ? (
+            <View style={{ paddingTop: 40, alignItems: 'center' }}>
+              <ActivityIndicator size="small" color={palette.inkSoft} />
+            </View>
+          ) : section === 'orders' ? (
+            filteredOrders.length === 0 ? (
+              <EmptyState title="暂无活跃订单" />
+            ) : (
+              filteredOrders.map((o, i) => {
+                const next = nextStatus(o.status);
+                return (
+                  <SketchBox key={o.id} radius={16} seed={i + 4} style={{ padding: 12 }}>
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                      <SketchPhoto
+                        src={o.dish_image_url ?? null}
+                        radius={10}
+                        seed={i + 9}
+                        style={{ width: 70, height: 70, flexShrink: 0 }}
+                      />
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'flex-start',
+                            justifyContent: 'space-between',
+                            gap: 8,
+                          }}
+                        >
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text
+                              style={{
+                                fontFamily: handFont,
+                                fontSize: 20,
+                                color: palette.ink,
+                                lineHeight: 21,
+                              }}
+                              numberOfLines={1}
+                            >
+                              {o.dish_name} ×{o.quantity}
+                            </Text>
+                            <Text
+                              style={{
+                                fontFamily: noteFont,
+                                fontSize: 12,
+                                color: palette.inkSoft,
+                                marginTop: 2,
+                              }}
+                              numberOfLines={1}
+                            >
+                              {o.diner_username} · {o.group_name}
+                            </Text>
+                          </View>
+                          {next ? (
+                            <Tappable
+                              feedback="press"
+                              onPress={() => onAdvance(o.id, next)}
+                            >
+                              <SketchPill
+                                seed={i + 7}
+                                style={{ paddingTop: 3, paddingBottom: 3 }}
+                              >
+                                <Text
+                                  style={{
+                                    fontFamily: handFont,
+                                    fontSize: 12,
+                                    color: palette.ink,
+                                  }}
+                                >
+                                  {nextStatusLabel(next)}
+                                </Text>
+                              </SketchPill>
+                            </Tappable>
+                          ) : (
+                            <SketchPill
+                              seed={i + 7}
+                              style={{ paddingTop: 3, paddingBottom: 3 }}
+                            >
+                              <Text
+                                style={{
+                                  fontFamily: handFont,
+                                  fontSize: 12,
+                                  color: palette.inkSoft,
+                                }}
+                              >
+                                {statusLabel(o.status)}
+                              </Text>
+                            </SketchPill>
+                          )}
+                        </View>
+                        <View
+                          style={{
+                            marginTop: 8,
+                            flexDirection: 'row',
+                            alignItems: 'baseline',
+                            justifyContent: 'space-between',
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontFamily: titleFont,
+                              fontStyle: 'italic',
+                              fontSize: 18,
+                              color: palette.ink,
+                            }}
+                          >
+                            ¥{o.price_at_order}
+                          </Text>
+                          <Text
+                            style={{
+                              fontFamily: noteFont,
+                              fontSize: 11,
+                              color: palette.inkMute,
+                            }}
+                          >
+                            长按可删除
+                          </Text>
+                        </View>
+                      </View>
                     </View>
-                  )}
-                  <View style={tw`flex-1 ml-3`}>
-                    <Text style={tw`text-xs text-gray-900`} numberOfLines={1}>
-                      <Text style={tw`font-bold`}>{c.username}</Text>
-                      <Text style={tw`text-gray-400`}> · </Text>
-                      <Text style={{ fontStyle: 'italic' }}>{c.dish_name}</Text>
-                    </Text>
-                    <Text style={tw`text-sm text-gray-700 mt-1`} numberOfLines={3}>
-                      {c.content}
-                    </Text>
-                    <Text style={tw`text-[10px] text-gray-400 mt-1`}>{c.group_name}</Text>
+                  </SketchBox>
+                );
+              })
+            )
+          ) : section === 'wishlist' ? (
+            filteredWishlist.length === 0 ? (
+              <EmptyState title="还没有 diner 投愿望" />
+            ) : (
+              filteredWishlist.map((w, i) => (
+                <SketchBox key={w.id} radius={16} seed={i + 4} style={{ padding: 14 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <SketchPill seed={i + 3} style={{ paddingTop: 3, paddingBottom: 3 }}>
+                      <ThumbsUp size={12} color={palette.ink} strokeWidth={1.5} />
+                      <Text
+                        style={{
+                          fontFamily: handFont,
+                          fontSize: 13,
+                          color: palette.ink,
+                        }}
+                      >
+                        {w.votes}
+                      </Text>
+                    </SketchPill>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text
+                        style={{
+                          fontFamily: handFont,
+                          fontSize: 18,
+                          color: palette.ink,
+                          lineHeight: 20,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {w.content}
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: noteFont,
+                          fontSize: 12,
+                          color: palette.inkMute,
+                          marginTop: 2,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {w.requester_username} · {w.group_name}
+                      </Text>
+                    </View>
                   </View>
                 </SketchBox>
-              </Pressable>
-            ))}
-          </ScrollView>
-        )
-      ) : (
-        // history
-        filteredHistory.length === 0 ? (
-          <EmptyState title="暂无历史订单" />
-        ) : (
-          <ScrollView contentContainerStyle={tw`px-4 mt-3 pb-20 gap-2`}>
-            {filteredHistory.map((o) => (
-              <OrderListItem
-                key={o.id}
-                status={o.status}
-                dishName={o.dish_name}
-                dishImageUrl={o.dish_image_url}
-                quantity={o.quantity}
-                price={o.price_at_order}
-                groupName={o.group_name}
-                partyLabel={o.diner_username}
-                createdAt={o.created_at}
-                ingredients={o.dish_ingredients}
-              />
-            ))}
-          </ScrollView>
-        )
-      )}
+              ))
+            )
+          ) : section === 'feedback' ? (
+            filteredFeedback.length === 0 ? (
+              <EmptyState title="还没有 diner 留言" />
+            ) : (
+              filteredFeedback.map((c, i) => (
+                <Tappable
+                  key={c.id}
+                  feedback="press"
+                  onPress={() => router.push(`/dish/${c.dish_id}` as any)}
+                >
+                  <SketchBox radius={16} seed={i + 4} style={{ padding: 14 }}>
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                      <SketchPhotoCircle
+                        src={c.avatar_url ?? null}
+                        size={40}
+                        seed={i + 5}
+                      />
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text
+                          style={{
+                            fontFamily: noteFont,
+                            fontSize: 13,
+                            color: palette.ink,
+                          }}
+                          numberOfLines={1}
+                        >
+                          <Text style={{ fontWeight: '700' }}>{c.username}</Text>
+                          <Text style={{ color: palette.inkMute }}> · </Text>
+                          <Text style={{ fontStyle: 'italic' }}>{c.dish_name}</Text>
+                        </Text>
+                        <Text
+                          style={{
+                            fontFamily: noteFont,
+                            fontSize: 13,
+                            color: palette.inkSoft,
+                            lineHeight: 19,
+                            marginTop: 4,
+                          }}
+                          numberOfLines={3}
+                        >
+                          {c.content}
+                        </Text>
+                        <Text
+                          style={{
+                            fontFamily: noteFont,
+                            fontSize: 11,
+                            color: palette.inkMute,
+                            marginTop: 4,
+                          }}
+                        >
+                          {c.group_name}
+                        </Text>
+                      </View>
+                    </View>
+                  </SketchBox>
+                </Tappable>
+              ))
+            )
+          ) : (
+            // history
+            filteredHistory.length === 0 ? (
+              <EmptyState title="暂无历史订单" />
+            ) : (
+              filteredHistory.map((o, i) => (
+                <SketchBox key={o.id} radius={16} seed={i + 4} style={{ padding: 12 }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                    }}
+                  >
+                    <View style={{ minWidth: 0, flex: 1 }}>
+                      <Text
+                        style={{
+                          fontFamily: handFont,
+                          fontSize: 18,
+                          color: palette.ink,
+                          lineHeight: 20,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {o.dish_name} ×{o.quantity}
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: noteFont,
+                          fontSize: 12,
+                          color: palette.inkSoft,
+                          marginTop: 2,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {new Date(o.created_at).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })}
+                        {' · '}
+                        {o.diner_username} · {o.group_name}
+                      </Text>
+                    </View>
+                    <Text
+                      style={{
+                        fontFamily: titleFont,
+                        fontStyle: 'italic',
+                        fontSize: 16,
+                        color: palette.ink,
+                      }}
+                    >
+                      ¥{o.price_at_order}
+                    </Text>
+                  </View>
+                </SketchBox>
+              ))
+            )
+          )}
+        </View>
+      </ScrollView>
+
+      <SketchBottomTabs active="orders" />
 
       <ConfirmDialog
         visible={!!deletingId}
@@ -315,19 +563,6 @@ export default function OrdersTab() {
         destructive
         loading={del.isPending}
       />
-    </AppContainer>
+    </View>
   );
-}
-
-function nextStatusLabel(s: OrderStatus): string {
-  switch (s) {
-    case 'preparing':
-      return '开始制作';
-    case 'ready':
-      return '可取';
-    case 'completed':
-      return '完成';
-    default:
-      return '推进';
-  }
 }

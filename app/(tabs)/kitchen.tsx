@@ -490,18 +490,39 @@ export default function KitchenTab() {
               </Text>
             </SketchBox>
           ) : (
-            <View style={{ gap: 16 }}>
-              {(cartes ?? []).map((c, i) => (
-                <CarteCard
-                  key={c.id}
-                  carte={c}
-                  index={i}
-                  onEdit={onSwipeEdit}
-                  onDelete={(c) => setConfirmingDelete(c)}
-                  onLeave={(c) => setConfirmingLeave(c)}
-                />
-              ))}
-            </View>
+            // 2-column grid: 1st card top-left, 2nd top-right, 3rd wraps to
+            // next row. Page still scrolls vertically. Tablets: 3 columns
+            // (more horizontal real estate).
+            (() => {
+              const gridGap = 12;
+              const sectionPadH = r.isTablet
+                ? contentPadH
+                : r.scale(20, { min: 14, max: 24 });
+              const innerW = r.width - sectionPadH * 2;
+              const cols = r.isTablet ? 3 : 2;
+              const cardW = Math.floor((innerW - gridGap * (cols - 1)) / cols);
+              return (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    gap: gridGap,
+                  }}
+                >
+                  {(cartes ?? []).map((c, i) => (
+                    <View key={c.id} style={{ width: cardW }}>
+                      <CarteCard
+                        carte={c}
+                        index={i}
+                        onEdit={onSwipeEdit}
+                        onDelete={(c) => setConfirmingDelete(c)}
+                        onLeave={(c) => setConfirmingLeave(c)}
+                      />
+                    </View>
+                  ))}
+                </View>
+              );
+            })()
           )}
         </View>
       </ScrollView>

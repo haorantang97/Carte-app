@@ -490,18 +490,39 @@ export default function KitchenTab() {
               </Text>
             </SketchBox>
           ) : (
-            <View style={{ gap: 16 }}>
+            // Horizontal scroll: each carte is a peekable card. Width sized so
+            // ~1.2 cards fit on phone (next-card peek invites swipe), capped on
+            // tablets so cards don't grow absurdly wide.
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                gap: 12,
+                paddingHorizontal: 4,
+                paddingVertical: 4,
+              }}
+              snapToInterval={r.scale(280, { min: 240, max: 360 }) + 12}
+              decelerationRate="fast"
+              // Negative margin lets cards bleed past the parent's
+              // horizontal padding so the last card edge can sit closer to
+              // the viewport right.
+              style={{ marginHorizontal: -4 }}
+            >
               {(cartes ?? []).map((c, i) => (
-                <CarteCard
+                <View
                   key={c.id}
-                  carte={c}
-                  index={i}
-                  onEdit={onSwipeEdit}
-                  onDelete={(c) => setConfirmingDelete(c)}
-                  onLeave={(c) => setConfirmingLeave(c)}
-                />
+                  style={{ width: r.scale(280, { min: 240, max: 360 }) }}
+                >
+                  <CarteCard
+                    carte={c}
+                    index={i}
+                    onEdit={onSwipeEdit}
+                    onDelete={(c) => setConfirmingDelete(c)}
+                    onLeave={(c) => setConfirmingLeave(c)}
+                  />
+                </View>
               ))}
-            </View>
+            </ScrollView>
           )}
         </View>
       </ScrollView>

@@ -59,8 +59,9 @@ export function useStartExtractDish() {
       if (insertErr) throw insertErr;
       const dishId = created.id;
 
-      // 2. 立刻 invalidate 让占位卡出现在列表里
+      // 2. 立刻 invalidate 让占位卡出现在列表里 + AI 配额计数 +1
       cacheBus.afterDishMutate(qc, input.groupId, dishId);
+      cacheBus.afterAiExtractStart(qc);
 
       // 3. 后台启动 edge function (不 await, 返回给用户后继续)
       void supabase.functions
@@ -139,6 +140,7 @@ export function useRetryExtractDish() {
       if (uErr) throw uErr;
 
       cacheBus.afterDishMutate(qc, input.groupId, input.dishId);
+      cacheBus.afterAiExtractStart(qc); // retry counts as a fresh AI call
 
       void supabase.functions.invoke('extract-recipe', {
         body: { dish_id: input.dishId, url: row.source_url },

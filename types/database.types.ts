@@ -382,6 +382,7 @@ export type Database = {
       get_apify_api_key: { Args: never; Returns: string }
       get_gemini_api_key: { Args: never; Returns: string }
       get_openclaw_api_key: { Args: never; Returns: string }
+      get_user_ai_quota: { Args: never; Returns: Json }
       is_group_chef: {
         Args: { check_group_id: string; check_user_id: string }
         Returns: boolean

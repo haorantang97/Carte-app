@@ -37,6 +37,8 @@ export const chefOrdersKey = (userId: string | undefined) =>
 
 export const wishlistKey = (groupId: string) => ['wishlist', groupId] as const;
 
+export const aiQuotaKey = (userId: string | undefined) => ['ai-quota', userId] as const;
+
 // ---- "事件 → 应该 bust 的 keys" 映射 ----
 
 const inv = (qc: QueryClient, key: readonly unknown[] | unknown[]) =>
@@ -137,5 +139,11 @@ export const cacheBus = {
   /** Wishlist 增/删/投票。 */
   afterWishlistMutate(qc: QueryClient, groupId: string) {
     inv(qc, wishlistKey(groupId));
+  },
+
+  /** Chef 触发了一次 AI extraction。bust quota cache(免得 Profile/AILimit 显示陈旧)。
+   *  传 prefix 而非具体 uid,因为本地可能没存当前 uid;quota cache 跨用户少。 */
+  afterAiExtractStart(qc: QueryClient) {
+    inv(qc, ['ai-quota']);
   },
 };

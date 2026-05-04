@@ -1,12 +1,59 @@
-# Carte 项目 Handoff(2026-05-01)
+# Carte 项目 Handoff(原 2026-05-01,更新 2026-05-04)
 
-> 上一段会话用 Claude Desktop App 做了大量改动,现在迁回 VS Code。本文是无缝衔接说明 — 已做、未做、决策依据、文件路径、注意事项,都在这。
+> 这份文档原本是 2026-05-01 由 Claude Desktop App 写的衔接说明。**2026-05-04 在 VS Code 里完成了大规模 Vite→RN 像素移植**,大部分 §4.1 的 P0 已经做完。**先看下面 §0a 的 5/4 增量,再读原文**(原文中 §2、§4、§5 大段已被超越)。
 
 ---
 
-## 0. 现状一句话
+## 0a. 2026-05-04 更新(supersedes parts of §0/§2/§4)
+
+**当前 commit 链**(每条独立可回滚):
+- `3154268` feat(ui): port all sheets/cards/components to sketch UI + supporting hooks(37 文件)
+- `6e4a439` feat(ui): pixel-port all 7 screens from Vite prototype(9 文件)
+- `4455fd2` feat(ui): sketch primitives + ink palette + responsive utils(16 文件)
+- `071c6aa` ← 5/1 那次,handoff.md 写在这
+
+**5/4 实际做完的(原 §4.1 P0 几乎全部)**:
+- ✅ kitchen.tsx 像素重构(carte 卡 / FAB / 子区 pill / 顶部 SketchUnderline)
+- ✅ dish/[id].tsx 全屏重构(SketchPhoto hero / 份量 stepper / ingredient pills / 步骤行 / 评论)
+- ✅ cook/[dishId].tsx 烹饪模式(sketch 计时器 + 上一步/下一步 CTA + ingredient token)
+- ✅ chef/group/[id].tsx 主体(分类 chip + 菜品 grid + FAB + header 预览 pill)
+- ✅ diner/group/[id].tsx 主体(category sidebar with sidebarStyle() + dish list + cart FAB + ?preview banner)
+- ✅ 所有 13 个 sheet 内部按钮换 sketch 包裹
+- ✅ Button/Input/Sheet/EmptyState/ConfirmDialog 全部底层换 sketch
+- ✅ Sidebar 字号自适应公式 — `sidebarStyle()` 已实现于 `app/diner/group/[id].tsx:32`
+- ✅ 5 张老 chef/diner 卡片删除(MenuGroupCard / PendingOrdersCard / RecentCommentsCard / WeeklyWishlistCard / KitchenCard)— 内联到新屏幕里
+- ✅ 多机型适配 — `lib/responsive.ts` 提供 `useResponsive()` hook(SE/mini/regular/large/tablet 5 档)
+- ✅ 字体层次最终答案(见下面新决策 #14、#15)
+- ✅ Jitter 收紧 — `soft 1.8→1.2 / mid 2.8→2.2 / strong 4.5→3.6`(iOS 3x DPI 校准过的值)
+
+**5/4 新增基础设施(原 §5 没列的)**:
+- `lib/palette.ts` — navy ink 调色板 + 字体角色定义 + 中文 fallback 注释
+- `lib/responsive.ts` — `useResponsive()` 多机型适配
+- `components/ui/SketchBottomTabs.tsx` — 自定义底部 tab(替代 Expo Router 默认 tab)
+- `components/ui/Tappable.tsx` — press/lift 反馈 wrapper(对应 Vite Tappable)
+- `components/ui/sketch/SketchPhoto.tsx` + `SketchPhotoCircle` — 图片 + 手绘外框
+
+**5/4 新增设计决策(原 §3 锁定的 13 条之外,加 2 条)**:
+
+| # | 决策 | 出处 |
+|---|---|---|
+| 14 | **像素级移植**:Vite 的 padding/fontSize/radius/seed/color **逐字搬,不再"基于设计意图自由发挥"** | b0760ff0 session 用户原话 "我不想让你视觉分析后再根据自己的理解给我重新做一版" |
+| 15 | **字体**:Latin (Caveat/Fraunces) + 中文 **fallback PingFang**。**不要给中文强加手写体**(ZCOOL/MaShan/LongCang 都试过,看着脏) | b0760ff0 收尾,Figma 截图证据 |
+
+**还没做的(以 5/4 为基线)**:
+- 🔲 `useAiQuota` 接真 Supabase RPC(目前 mock `{used:3, limit:8}`)
+- 🔲 拍照识别接 Gemini/OpenAI Vision(目前 toast "即将上线")
+- 🔲 Pro 升级接 RevenueCat / Apple IAP(目前 toast 占位)
+- 🔲 share 域名换真值(等买到 carte.app 真域名)
+- 🔲 P2 prebuild 后:iOS ShareExtension / LiveActivity Path B / WeChat SDK / Diner 烹饪 LiveActivity
+
+---
+
+## 0. 现状一句话(原 5/1)
 
 **RN App 第一波结构性改动落地 + 通过 typecheck**,但**手绘视觉样式只覆盖了新增/重构的屏幕**(后厨 / AddDishSheet / AILimitSheet / Profile AI 块 / chef 预览按钮 / diner 预览 banner)。其他屏幕的 border 还是旧的灰线,需要分批迁到 SketchBox。
+
+> ⚠️ 5/4 已大幅推进,见 §0a。这一段保留作历史记录。
 
 ---
 

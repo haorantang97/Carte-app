@@ -27,7 +27,7 @@ export function CarteCard({ carte, index, onEdit, onDelete, onLeave }: Props) {
   const r = useResponsive();
   const { t } = useTranslation();
   const swipeRef = useRef<Swipeable>(null);
-  const coverH = r.scale(152, { min: 130, max: 200 });
+  const photoSize = r.scale(78, { min: 64, max: 108 });
 
   const handlePress = () => {
     Haptics.selectionAsync().catch(() => {});
@@ -115,53 +115,52 @@ export function CarteCard({ carte, index, onEdit, onDelete, onLeave }: Props) {
         rightThreshold={40}
       >
         <Tappable feedback="lift" onPress={handlePress} onLongPress={handleLongPress}>
-          <SketchBox radius={20} seed={index + 4} fillColor={palette.paper}>
-            {/* Cover */}
-            <View style={{ height: coverH, padding: 14, paddingBottom: 6 }}>
+          <SketchBox
+            radius={16}
+            seed={index + 4}
+            fillColor={palette.paper}
+            style={{ padding: 12 }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              {/* Thumb (left) */}
               {carte.chef_avatar_url ? (
                 <SketchPhoto
                   src={carte.chef_avatar_url}
-                  radius={14}
+                  radius={12}
                   seed={index + 10}
-                  style={{ width: '100%', height: '100%' }}
+                  style={{ width: photoSize, height: photoSize, flexShrink: 0 }}
                 />
               ) : (
                 <View
                   style={{
-                    width: '100%',
-                    height: '100%',
-                    borderRadius: 14,
+                    width: photoSize,
+                    height: photoSize,
+                    borderRadius: 12,
                     backgroundColor: palette.inkPale,
                     alignItems: 'center',
                     justifyContent: 'center',
+                    flexShrink: 0,
                   }}
                 >
-                  <ChefHat
-                    size={r.scale(42, { min: 36, max: 56 })}
-                    color={palette.ink}
-                    strokeWidth={1.4}
-                  />
+                  <ChefHat size={28} color={palette.ink} strokeWidth={1.4} />
                 </View>
               )}
-            </View>
-            {/* Body */}
-            <View
-              style={{
-                paddingHorizontal: 16,
-                paddingBottom: 16,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
+
+              {/* Text + pill (right, flex 1) */}
               <View style={{ flex: 1, minWidth: 0 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
                   <Text
                     style={{
                       fontFamily: handFont,
-                      fontSize: r.fontScale(26, { min: 22, max: 32 }),
+                      fontSize: r.fontScale(22, { min: 18, max: 26 }),
                       color: palette.ink,
-                      lineHeight: r.fontScale(28, { min: 24, max: 34 }),
+                      lineHeight: r.fontScale(24, { min: 20, max: 28 }),
                       flexShrink: 1,
                     }}
                     numberOfLines={1}
@@ -169,15 +168,19 @@ export function CarteCard({ carte, index, onEdit, onDelete, onLeave }: Props) {
                     {carte.name}
                   </Text>
                   {carte.is_private ? (
-                    <Lock size={14} color={palette.inkSoft} strokeWidth={1.5} />
+                    <Lock size={13} color={palette.inkSoft} strokeWidth={1.5} />
                   ) : null}
+                  <View style={{ flex: 1 }} />
+                  <SketchPill active={carte.is_mine} seed={index + 6}>
+                    {carte.is_mine ? 'CHEF' : 'DINER'}
+                  </SketchPill>
                 </View>
                 <View
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: 8,
-                    marginTop: 2,
+                    marginTop: 6,
                   }}
                 >
                   <Text
@@ -200,6 +203,7 @@ export function CarteCard({ carte, index, onEdit, onDelete, onLeave }: Props) {
                       fontFamily: noteFont,
                       fontSize: 11,
                       color: palette.inkMute,
+                      flexShrink: 1,
                     }}
                     numberOfLines={1}
                   >
@@ -207,9 +211,6 @@ export function CarteCard({ carte, index, onEdit, onDelete, onLeave }: Props) {
                   </Text>
                 </View>
               </View>
-              <SketchPill active={carte.is_mine} seed={index + 6}>
-                {carte.is_mine ? 'CHEF' : 'DINER'}
-              </SketchPill>
             </View>
           </SketchBox>
         </Tappable>

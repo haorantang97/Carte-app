@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TextInput, View } from 'react-native';
+import { ActivityIndicator, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Send } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -63,9 +63,13 @@ export function CommentComposer({ dishId }: Props) {
         onPress={submit}
         disabled={!text.trim() || post.isPending}
       >
-        <View style={{ opacity: !text.trim() ? 0.4 : 1 }}>
+        <View style={{ opacity: !text.trim() && !post.isPending ? 0.4 : 1 }}>
           <SketchCircle size={40} seed={121}>
-            <Send size={14} color={palette.ink} strokeWidth={1.6} />
+            {post.isPending ? (
+              <ActivityIndicator size="small" color={palette.ink} />
+            ) : (
+              <Send size={14} color={palette.ink} strokeWidth={1.6} />
+            )}
           </SketchCircle>
         </View>
       </Tappable>

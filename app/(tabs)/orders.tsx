@@ -276,7 +276,17 @@ export default function OrdersTab() {
               filteredOrders.map((o, i) => {
                 const next = nextStatus(o.status);
                 return (
-                  <SketchBox key={o.id} radius={16} seed={i + 4} style={{ padding: 12 }}>
+                  <Tappable
+                    key={o.id}
+                    feedback="press"
+                    onLongPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(
+                        () => {},
+                      );
+                      setDeletingId(o.id);
+                    }}
+                  >
+                  <SketchBox radius={16} seed={i + 4} style={{ padding: 12 }}>
                     <View style={{ flexDirection: 'row', gap: 12 }}>
                       <SketchPhoto
                         src={o.dish_image_url ?? null}
@@ -320,6 +330,7 @@ export default function OrdersTab() {
                           {next ? (
                             <Tappable
                               feedback="press"
+                              disabled={update.isPending}
                               onPress={() => onAdvance(o.id, next)}
                             >
                               <SketchPill
@@ -330,7 +341,9 @@ export default function OrdersTab() {
                                   style={{
                                     fontFamily: handFont,
                                     fontSize: 12,
-                                    color: palette.ink,
+                                    color: update.isPending
+                                      ? palette.inkMute
+                                      : palette.ink,
                                   }}
                                 >
                                   {nextStatusLabel(next)}
@@ -385,6 +398,7 @@ export default function OrdersTab() {
                       </View>
                     </View>
                   </SketchBox>
+                  </Tappable>
                 );
               })
             )

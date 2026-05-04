@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Eye, Lock, Pencil, Plus, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Copy, Eye, Lock, Pencil, Plus, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -198,17 +199,35 @@ export default function ChefGroupDetails() {
                 <Lock size={16} color={palette.inkSoft} strokeWidth={1.5} />
               ) : null}
             </View>
-            <Text
-              style={{
-                fontFamily: uiFont,
-                fontSize: 12,
-                color: palette.inkMute,
-                letterSpacing: 2.5,
-                marginTop: 2,
+            <Tappable
+              feedback="press"
+              onPress={async () => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                await Clipboard.setStringAsync(data.group.access_code);
+                showToast.success(t('chef.carteCodeCopied'), data.group.access_code);
               }}
             >
-              {data.group.access_code} · 长按复制
-            </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  marginTop: 2,
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: uiFont,
+                    fontSize: 12,
+                    color: palette.inkSoft,
+                    letterSpacing: 2.5,
+                  }}
+                >
+                  {data.group.access_code}
+                </Text>
+                <Copy size={11} color={palette.inkMute} strokeWidth={1.5} />
+              </View>
+            </Tappable>
           </View>
           <Tappable
             feedback="press"

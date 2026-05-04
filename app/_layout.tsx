@@ -29,6 +29,7 @@ import { ZCOOLXiaoWei_400Regular } from '@expo-google-fonts/zcool-xiaowei';
 import { ZCOOLKuaiLe_400Regular } from '@expo-google-fonts/zcool-kuaile';
 import { MaShanZheng_400Regular } from '@expo-google-fonts/ma-shan-zheng';
 import { Caveat_400Regular, Caveat_700Bold } from '@expo-google-fonts/caveat';
+import { Kalam_400Regular, Kalam_700Bold } from '@expo-google-fonts/kalam';
 import { queryClient, asyncStoragePersister } from '@/lib/queryClient';
 import { ensureSession, ensureProfile } from '@/lib/auth';
 import i18n, { initI18n } from '@/lib/i18n';
@@ -83,6 +84,8 @@ export default function RootLayout() {
     MaShanZheng_400Regular,
     Caveat_400Regular,
     Caveat_700Bold,
+    Kalam_400Regular,
+    Kalam_700Bold,
   });
 
   // Once fonts load, set Inter as the default fontFamily for every <Text>

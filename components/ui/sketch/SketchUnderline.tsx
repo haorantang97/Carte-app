@@ -1,6 +1,6 @@
 import Svg, { Path } from 'react-native-svg';
 
-import { BRAND } from '@/lib/constants';
+import { palette } from '@/lib/palette';
 
 interface Props {
   width?: number;
@@ -16,7 +16,7 @@ interface Props {
 export function SketchUnderline({
   width = 80,
   seed = 1,
-  color = BRAND.textPrimary,
+  color = palette.ink,
   strokeWidth = 1.5,
 }: Props) {
   const wobble1 = 2 + Math.sin(seed * 1.3) * 2;

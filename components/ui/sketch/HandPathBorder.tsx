@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { LayoutChangeEvent, View, ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { BRAND } from '@/lib/constants';
+import { palette } from '@/lib/palette';
 
 import { buildHandPath, JITTER_BY_LEVEL, WobbleLevel } from './handPath';
 
@@ -12,19 +12,25 @@ interface Props {
   strokeWidth?: number;
   wobble?: WobbleLevel;
   color?: string;
+  fillColor?: string;
   style?: ViewStyle;
 }
 
 /**
  * Absolutely-positioned hand-drawn border. Drop inside a relatively-positioned
  * parent — it measures its own size via onLayout and renders an SVG path.
+ *
+ * If `fillColor` is set, the wobble path is also painted as a filled background
+ * underneath the stroke. This lets cards have an accent fill that perfectly
+ * follows the wobbly outline (vs. a rectangular bg-color leaking past corners).
  */
 export function HandPathBorder({
   radius,
   seed,
   strokeWidth = 1.5,
   wobble = 'soft',
-  color = BRAND.textPrimary,
+  color = palette.ink,
+  fillColor,
   style,
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -49,6 +55,9 @@ export function HandPathBorder({
     >
       {d ? (
         <Svg width={size.w} height={size.h} viewBox={`0 0 ${size.w} ${size.h}`}>
+          {fillColor ? (
+            <Path d={d} fill={fillColor} stroke="none" />
+          ) : null}
           <Path
             d={d}
             fill="none"

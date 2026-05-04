@@ -6,10 +6,16 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Brand / accent (legacy tan for some flows; new sketch UI uses navy ink).
         brand: '#A68B6A',
         'brand-hover': '#8B7355',
-        bg: '#FAF9F6',
-        // Mirror the gray scale from original constants.ts
+        // Page background: Vite design uses pure white "paper".
+        bg: '#FFFFFF',
+        // Sketch ink palette — mirrors lib/palette.ts.
+        ink: '#1E3A8A',
+        'ink-soft': '#3A5BB8',
+        'ink-mute': '#7B95D6',
+        'ink-pale': '#BFCDEB',
         gray: {
           50: '#FAF9F6',
           100: '#F5F5F5',

@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Pressable, Text, View, ViewStyle } from 'react-native';
 
-import { BRAND } from '@/lib/constants';
+import { palette, handFont } from '@/lib/palette';
 import tw from '@/lib/tw';
 
 import { HandPathBorder } from './HandPathBorder';
@@ -30,7 +30,7 @@ export function SketchPill({
   active = false,
   seed = 1,
   wobble = 'soft',
-  color = BRAND.textPrimary,
+  color = palette.ink,
   style,
   testID,
 }: Props) {
@@ -66,7 +66,7 @@ export function SketchPill({
       {typeof children === 'string' ? (
         <Text
           style={[
-            { color, fontSize: 14, fontWeight: active ? '700' : '400' },
+            { color, fontFamily: handFont, fontSize: 14, fontWeight: active ? '700' : '400' },
           ]}
         >
           {children}

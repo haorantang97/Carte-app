@@ -5,10 +5,14 @@
 
 export type WobbleLevel = 'soft' | 'mid' | 'strong';
 
+// Tuned softer than Vite's 1.8 — at native iOS 3x DPI the SVG path renders
+// crisper than Figma's web preview, so the same numeric jitter looks "more
+// wobbly" on device. 1.2 gives a wobble visually comparable to what the user
+// sees in Figma at iPhone 14 preview size.
 export const JITTER_BY_LEVEL: Record<WobbleLevel, number> = {
-  soft: 1.8,
-  mid: 2.8,
-  strong: 4.5,
+  soft: 1.2,
+  mid: 2.2,
+  strong: 3.6,
 };
 
 /** Pseudo-random in [-1, 1] from (seed, index). */

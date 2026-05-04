@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { View, ViewStyle } from 'react-native';
 
-import { BRAND } from '@/lib/constants';
+import { palette } from '@/lib/palette';
 
 import { HandPathBorder } from './HandPathBorder';
 import { WobbleLevel } from './handPath';
@@ -13,6 +13,8 @@ interface Props {
   strokeWidth?: number;
   wobble?: WobbleLevel;
   color?: string;
+  /** When set, the wobble path is filled with this color (perfectly clipped). */
+  fillColor?: string;
   style?: ViewStyle;
 }
 
@@ -26,7 +28,8 @@ export function SketchBox({
   seed = 1,
   strokeWidth = 1.5,
   wobble = 'soft',
-  color = BRAND.textPrimary,
+  color = palette.ink,
+  fillColor,
   style,
 }: Props) {
   return (
@@ -37,6 +40,7 @@ export function SketchBox({
         strokeWidth={strokeWidth}
         wobble={wobble}
         color={color}
+        fillColor={fillColor}
       />
       {children}
     </View>

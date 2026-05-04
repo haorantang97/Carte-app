@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { Pressable, View, ViewStyle } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
-import { BRAND } from '@/lib/constants';
+import { palette } from '@/lib/palette';
 
 interface Props {
   size: number;
@@ -24,7 +24,7 @@ export function SketchCircle({
   size,
   children,
   strokeWidth = 1.5,
-  color = BRAND.textPrimary,
+  color = palette.ink,
   style,
   onPress,
   testID,

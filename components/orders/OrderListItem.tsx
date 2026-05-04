@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ChevronRight, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import tw from '@/lib/tw';
+import { palette } from '@/lib/palette';
 import type { OrderStatus } from '@/types/domain';
 import { formatPrice } from '@/lib/price';
 import { formatTimeAgo } from '@/lib/time';
@@ -118,7 +119,7 @@ export function OrderListItem({
                   hitSlop={6}
                   style={tw`w-7 h-7 rounded-full bg-gray-50 items-center justify-center`}
                 >
-                  <Trash2 size={11} color="#A30000" />
+                  <Trash2 size={11} color={palette.destructive} />
                 </Pressable>
               ) : null}
               {onAdvance ? (

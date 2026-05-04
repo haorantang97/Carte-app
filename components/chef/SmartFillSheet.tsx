@@ -8,14 +8,14 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
-import { Camera, Link2, Sparkles, Type as TypeIcon } from 'lucide-react-native';
+import { Camera, Link2, Type as TypeIcon } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 
 import { Sheet } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/Button';
 import { Tappable } from '@/components/ui/Tappable';
-import { SketchBox, SketchPill } from '@/components/ui/sketch';
+import { SketchBox } from '@/components/ui/sketch';
 import { showToast } from '@/components/ui/Toast';
 import { useStartExtractDish } from '@/hooks/storage/useStartExtractDish';
 import { palette, handFont, noteFont } from '@/lib/palette';
@@ -177,7 +177,7 @@ export function SmartFillSheet({
   categoryId,
   onStarted,
 }: Props) {
-  const { t } = useTranslation();
+  useTranslation();
   const start = useStartExtractDish();
 
   const [mode, setMode] = useState<Mode>('url');
@@ -366,7 +366,7 @@ export function SmartFillSheet({
                     style={{
                       fontFamily: noteFont,
                       fontSize: 11,
-                      color: '#0A6E2A',
+                      color: palette.success,
                     }}
                   >
                     ✓ 识别到链接: {extracted}
@@ -379,7 +379,7 @@ export function SmartFillSheet({
                     style={{
                       fontFamily: noteFont,
                       fontSize: 11,
-                      color: '#A30000',
+                      color: palette.destructive,
                     }}
                   >
                     没在文本里找到 http/https 开头的链接
@@ -484,7 +484,7 @@ export function SmartFillSheet({
           <SketchBox
             radius={10}
             seed={312}
-            color="#A30000"
+            color={palette.destructive}
             fillColor="#FFF5F5"
             style={{ paddingHorizontal: 12, paddingVertical: 10 }}
           >
@@ -492,7 +492,7 @@ export function SmartFillSheet({
               style={{
                 fontFamily: noteFont,
                 fontSize: 12,
-                color: '#A30000',
+                color: palette.destructive,
                 lineHeight: 18,
               }}
             >
@@ -613,7 +613,7 @@ function ProgressStages({ mode, url }: { mode: Mode; url: string }) {
                   fontFamily: noteFont,
                   fontSize: 11,
                   color: done
-                    ? '#0A6E2A'
+                    ? palette.success
                     : active
                       ? palette.ink
                       : palette.inkPale,

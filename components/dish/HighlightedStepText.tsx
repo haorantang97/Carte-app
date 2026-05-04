@@ -12,7 +12,7 @@ export interface IngredientLike {
 
 interface Props {
   text: string;
-  ingredients: Array<string | IngredientLike>;
+  ingredients: (string | IngredientLike)[];
   baseStyle?: StyleProp<TextStyle>;
   highlightStyle?: StyleProp<TextStyle>;
   /** 点击高亮的食材 token 时回调。不传则 token 仅高亮不可点。 */

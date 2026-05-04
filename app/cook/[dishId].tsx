@@ -39,13 +39,13 @@ export default function CookingScreen() {
 
   const steps = useMemo(() => {
     if (!dish)
-      return [] as Array<{
+      return [] as {
         kind: 'prep' | 'cook';
         order: number;
         instruction: string;
         duration_min?: number;
         tip?: string;
-      }>;
+      }[];
     const prep = (dish.prep_steps ?? [])
       .slice()
       .sort((a, b) => a.order - b.order)

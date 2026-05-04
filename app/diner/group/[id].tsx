@@ -3,7 +3,6 @@ import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Tappable } from '@/components/ui/Tappable';
@@ -20,13 +19,13 @@ import {
 } from '@/components/ui/sketch';
 import { useDinerMenu } from '@/hooks/diner/useDinerMenu';
 import { useCart, type CartItem } from '@/stores/cartStore';
+import { showToast } from '@/components/ui/Toast';
+import { palette, handFont, noteFont } from '@/lib/palette';
+import { useResponsive } from '@/lib/responsive';
 
 // Stable reference for empty cart fallback — using a fresh `[]` inline would
 // cause zustand's getSnapshot to think state changed every render → loop.
 const EMPTY_CART: CartItem[] = [];
-import { showToast } from '@/components/ui/Toast';
-import { palette, handFont, noteFont } from '@/lib/palette';
-import { useResponsive } from '@/lib/responsive';
 
 // Adaptive sidebar font sizing — mirrors Vite DinerCarteScreen.sidebarStyle.
 function sidebarStyle(names: string[]): { fontSize: number; lines: 1 | 2 } {

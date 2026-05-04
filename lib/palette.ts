@@ -9,6 +9,11 @@ export const palette = {
   inkMute: '#7B95D6',
   inkPale: '#BFCDEB',
   hand: '#1E3A8A',
+  // Semantic accent colors. Used sparingly — only for destructive actions
+  // (delete buttons, error inline) and success confirmations (URL detected,
+  // upload OK). All other UI sticks with the navy ink scale.
+  destructive: '#A30000',
+  success: '#0A6E2A',
 } as const;
 
 // =============================================================================

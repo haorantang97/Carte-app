@@ -343,11 +343,11 @@ export default function ChefGroupDetails() {
                 <Tappable feedback="press" onPress={() => setDeletingCategory(activeCat)}>
                   <SketchPill
                     seed={31}
-                    color="#A30000"
+                    color={palette.destructive}
                     style={{ paddingTop: 3, paddingBottom: 3 }}
                   >
-                    <Trash2 size={11} color="#A30000" strokeWidth={1.5} />
-                    <Text style={{ fontFamily: handFont, fontSize: 12, color: '#A30000' }}>
+                    <Trash2 size={11} color={palette.destructive} strokeWidth={1.5} />
+                    <Text style={{ fontFamily: handFont, fontSize: 12, color: palette.destructive }}>
                       {t('common.delete')}
                     </Text>
                   </SketchPill>
@@ -380,7 +380,7 @@ export default function ChefGroupDetails() {
                       marginTop: 4,
                     }}
                   >
-                    点下方"添加菜品"开始
+                    点下方「添加菜品」开始
                   </Text>
                 </View>
               ) : (

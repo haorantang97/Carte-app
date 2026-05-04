@@ -43,7 +43,7 @@ function CommentRow({
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: 12,
-        backgroundColor: '#A30000',
+        backgroundColor: palette.destructive,
         marginLeft: 8,
       }}
     >

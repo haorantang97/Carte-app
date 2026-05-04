@@ -76,7 +76,7 @@ export function CarteCard({ carte, index, onEdit, onDelete, onLeave }: Props) {
               width: 64,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: '#A30000',
+              backgroundColor: palette.destructive,
               borderRadius: 16,
             }}
           >
@@ -93,7 +93,7 @@ export function CarteCard({ carte, index, onEdit, onDelete, onLeave }: Props) {
             width: 80,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: '#A30000',
+            backgroundColor: palette.destructive,
             borderRadius: 16,
           }}
         >

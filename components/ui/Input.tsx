@@ -34,7 +34,7 @@ export const Input = forwardRef<TextInput, Props>(function Input(
       <SketchBox
         radius={12}
         seed={seed}
-        color={error ? '#A30000' : palette.ink}
+        color={error ? palette.destructive : palette.ink}
         fillColor={palette.paper}
         style={{ paddingHorizontal: 14, paddingVertical: 10 }}
       >
@@ -59,7 +59,7 @@ export const Input = forwardRef<TextInput, Props>(function Input(
           style={{
             fontFamily: noteFont,
             fontSize: 12,
-            color: '#A30000',
+            color: palette.destructive,
             marginTop: 4,
           }}
         >

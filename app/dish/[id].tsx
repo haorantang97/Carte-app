@@ -814,7 +814,7 @@ function StepRow({
 }: {
   step: { order: number; instruction: string; duration_min?: number; tip?: string };
   seed: number;
-  ingredients?: Array<string | IngredientLike>;
+  ingredients?: (string | IngredientLike)[];
   onIngredientPress?: (ing: IngredientLike) => void;
 }) {
   return (

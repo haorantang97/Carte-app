@@ -45,8 +45,8 @@ export function Button({
   const isPrimary = variant === 'primary';
   const isGhost = variant === 'ghost';
 
-  const strokeColor = isDestructive ? '#A30000' : palette.ink;
-  const textColor = isDestructive ? '#A30000' : palette.ink;
+  const strokeColor = isDestructive ? palette.destructive : palette.ink;
+  const textColor = isDestructive ? palette.destructive : palette.ink;
   const fontSize = size === 'sm' ? 16 : 18;
   const paddingV = size === 'sm' ? 8 : 12;
 

@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function AddCarteSheet({ visible, onClose, onCreate, onJoin }: Props) {
-  const { t } = useTranslation();
+  useTranslation();
 
   const handle = (fn: () => void) => () => {
     Haptics.selectionAsync().catch(() => {});

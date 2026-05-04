@@ -244,7 +244,7 @@ export function DishCard({ dish, index, onEdit, onDelete, onRetry }: Props) {
           width: 56,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#A30000',
+          backgroundColor: palette.destructive,
           borderRadius: 12,
         }}
       >

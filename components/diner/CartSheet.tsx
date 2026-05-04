@@ -124,7 +124,7 @@ export function CartSheet({ visible, onClose, groupId }: Props) {
                   >
                     <SketchCircle size={26} seed={i + 50}>
                       {it.quantity === 1 ? (
-                        <Trash2 size={12} color="#A30000" strokeWidth={1.6} />
+                        <Trash2 size={12} color={palette.destructive} strokeWidth={1.6} />
                       ) : (
                         <Minus size={12} color={palette.ink} strokeWidth={1.6} />
                       )}

@@ -1,38 +1,81 @@
 import { forwardRef } from 'react';
 import { Text, TextInput, type TextInputProps, View } from 'react-native';
-import tw from '@/lib/tw';
+
+import { SketchBox } from '@/components/ui/sketch';
+import { palette, handFont, noteFont } from '@/lib/palette';
 
 interface Props extends TextInputProps {
   label?: string;
   error?: string;
   hint?: string;
+  /** Sketch seed for stable wobble shape */
+  seed?: number;
 }
 
 export const Input = forwardRef<TextInput, Props>(function Input(
-  { label, error, hint, style, ...rest },
+  { label, error, hint, style, seed = 5, ...rest },
   ref,
 ) {
   return (
     <View>
       {label ? (
-        <Text style={tw`text-xs font-medium text-gray-700 mb-1.5`}>{label}</Text>
+        <Text
+          style={{
+            fontFamily: handFont,
+            fontSize: 16,
+            color: palette.ink,
+            marginBottom: 6,
+            lineHeight: 18,
+          }}
+        >
+          {label}
+        </Text>
       ) : null}
-      <TextInput
-        ref={ref}
-        placeholderTextColor="#A3A3A3"
-        style={[
-          tw.style(
-            'bg-white border rounded-lg px-3 py-2.5 text-sm text-gray-900',
-            error ? 'border-red-400' : 'border-gray-300',
-          ),
-          style,
-        ]}
-        {...rest}
-      />
+      <SketchBox
+        radius={12}
+        seed={seed}
+        color={error ? '#A30000' : palette.ink}
+        fillColor={palette.paper}
+        style={{ paddingHorizontal: 14, paddingVertical: 10 }}
+      >
+        <TextInput
+          ref={ref}
+          placeholderTextColor={palette.inkMute}
+          style={[
+            {
+              fontFamily: handFont,
+              fontSize: 18,
+              color: palette.ink,
+              padding: 0,
+              minHeight: 24,
+            },
+            style,
+          ]}
+          {...rest}
+        />
+      </SketchBox>
       {error ? (
-        <Text style={tw`mt-1 text-[11px] text-red-600`}>{error}</Text>
+        <Text
+          style={{
+            fontFamily: noteFont,
+            fontSize: 12,
+            color: '#A30000',
+            marginTop: 4,
+          }}
+        >
+          {error}
+        </Text>
       ) : hint ? (
-        <Text style={tw`mt-1 text-[11px] text-gray-500`}>{hint}</Text>
+        <Text
+          style={{
+            fontFamily: noteFont,
+            fontSize: 12,
+            color: palette.inkSoft,
+            marginTop: 4,
+          }}
+        >
+          {hint}
+        </Text>
       ) : null}
     </View>
   );

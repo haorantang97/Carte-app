@@ -43,8 +43,9 @@ export function useDishComments(dishId: string | undefined) {
   // Realtime: refetch on any change for this dish (cheap; comments per dish are small)
   useEffect(() => {
     if (!dishId) return;
+    const nonce = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`dish_comments:${dishId}:${user?.id ?? 'anon'}`)
+      .channel(`dish_comments:${dishId}:${user?.id ?? 'anon'}:${nonce}`)
       .on(
         'postgres_changes',
         {

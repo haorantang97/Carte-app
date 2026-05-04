@@ -1,20 +1,15 @@
 import { Text, View } from 'react-native';
 import { Sheet } from '@/components/ui/Sheet';
-import tw from '@/lib/tw';
+import { palette, handFont, noteFont, titleFont } from '@/lib/palette';
 import type { IngredientLike } from './HighlightedStepText';
 
 interface Props {
   visible: boolean;
   onClose: () => void;
   ingredient: IngredientLike | null;
-  /** 已按 servings ratio 缩放后的用量(可选)。未传则显示原 quantity。 */
   scaledQuantity?: string;
 }
 
-/**
- * 食材详情 bottom sheet — 步骤里点击食材 token 时弹出。
- * 显示:用量(原文 + 缩放后) + 备注(如果有)。
- */
 export function IngredientSheet({
   visible,
   onClose,
@@ -27,29 +22,86 @@ export function IngredientSheet({
       onClose={onClose}
       title={ingredient?.name ?? '食材'}
     >
-      <View style={tw`gap-4 mt-2 pb-4`}>
+      <View style={{ gap: 16, marginTop: 8, paddingBottom: 16 }}>
         {ingredient?.quantity ? (
           <View>
-            <Text style={tw`text-[10px] text-gray-500 mb-1`}>用量</Text>
-            <Text style={tw`text-2xl font-semibold text-gray-900`}>
+            <Text
+              style={{
+                fontFamily: noteFont,
+                fontSize: 11,
+                color: palette.inkMute,
+                marginBottom: 4,
+              }}
+            >
+              用量
+            </Text>
+            <Text
+              style={{
+                fontFamily: titleFont,
+                fontStyle: 'italic',
+                fontSize: 28,
+                color: palette.ink,
+                fontWeight: '700',
+              }}
+            >
               {scaledQuantity ?? ingredient.quantity}
             </Text>
             {scaledQuantity && scaledQuantity !== ingredient.quantity ? (
-              <Text style={tw`text-[11px] text-gray-500 mt-1`}>
+              <Text
+                style={{
+                  fontFamily: noteFont,
+                  fontSize: 12,
+                  color: palette.inkSoft,
+                  marginTop: 4,
+                }}
+              >
                 原 {ingredient.quantity}
               </Text>
             ) : null}
           </View>
         ) : (
           <View>
-            <Text style={tw`text-[10px] text-gray-500 mb-1`}>用量</Text>
-            <Text style={tw`text-sm text-gray-500`}>未注明,按口味添加</Text>
+            <Text
+              style={{
+                fontFamily: noteFont,
+                fontSize: 11,
+                color: palette.inkMute,
+                marginBottom: 4,
+              }}
+            >
+              用量
+            </Text>
+            <Text
+              style={{
+                fontFamily: handFont,
+                fontSize: 16,
+                color: palette.inkSoft,
+              }}
+            >
+              未注明,按口味添加
+            </Text>
           </View>
         )}
         {ingredient?.note ? (
           <View>
-            <Text style={tw`text-[10px] text-gray-500 mb-1`}>备注</Text>
-            <Text style={tw`text-sm text-gray-700 leading-relaxed`}>
+            <Text
+              style={{
+                fontFamily: noteFont,
+                fontSize: 11,
+                color: palette.inkMute,
+                marginBottom: 4,
+              }}
+            >
+              备注
+            </Text>
+            <Text
+              style={{
+                fontFamily: noteFont,
+                fontSize: 14,
+                color: palette.ink,
+                lineHeight: 22,
+              }}
+            >
               {ingredient.note}
             </Text>
           </View>

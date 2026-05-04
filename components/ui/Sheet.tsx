@@ -9,7 +9,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
-import tw from '@/lib/tw';
+
+import { palette, handFont } from '@/lib/palette';
+import { useResponsive } from '@/lib/responsive';
 
 interface Props {
   visible: boolean;
@@ -20,33 +22,83 @@ interface Props {
 
 export function Sheet({ visible, onClose, title, children }: Props) {
   const insets = useSafeAreaInsets();
+  const r = useResponsive();
+  // On tablets, present sheet as centered card. On phones, slide up from bottom.
+  const isCard = r.isTablet;
+  const padH = r.scale(22, { min: 16, max: 28 });
+
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType={isCard ? 'fade' : 'slide'}
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <View style={tw`flex-1 justify-end bg-black/40`}>
-        <Pressable style={tw`absolute inset-0`} onPress={onClose} />
+      <View
+        style={{
+          flex: 1,
+          justifyContent: isCard ? 'center' : 'flex-end',
+          alignItems: isCard ? 'center' : 'stretch',
+          paddingHorizontal: isCard ? 24 : 0,
+          backgroundColor: 'rgba(30, 58, 138, 0.35)',
+        }}
+      >
+        <Pressable
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+          onPress={onClose}
+        />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={isCard ? { width: '100%', maxWidth: 560 } : undefined}
         >
           <View
-            style={[
-              tw`bg-white rounded-t-2xl px-5 pt-3`,
-              { paddingBottom: insets.bottom + 16 },
-            ]}
+            style={{
+              backgroundColor: palette.paper,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              borderBottomLeftRadius: isCard ? 24 : 0,
+              borderBottomRightRadius: isCard ? 24 : 0,
+              paddingHorizontal: padH,
+              paddingTop: 12,
+              paddingBottom: isCard ? 22 : insets.bottom + 16,
+            }}
           >
-            <View style={tw`items-center pb-1`}>
-              <View style={tw`w-10 h-1 rounded-full bg-gray-300`} />
+            <View style={{ alignItems: 'center', paddingBottom: 4 }}>
+              <View
+                style={{
+                  width: 40,
+                  height: 4,
+                  borderRadius: 999,
+                  backgroundColor: palette.inkPale,
+                }}
+              />
             </View>
             {title ? (
-              <View style={tw`flex-row items-center justify-between py-2`}>
-                <Text style={tw`text-base font-semibold text-gray-900`}>{title}</Text>
-                <Pressable onPress={onClose} hitSlop={8} style={tw`p-1`}>
-                  <X size={18} color="#737373" />
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingVertical: 8,
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: handFont,
+                    fontSize: r.fontScale(24, { min: 20, max: 28 }),
+                    color: palette.ink,
+                    lineHeight: r.fontScale(26, { min: 22, max: 30 }),
+                  }}
+                >
+                  {title}
+                </Text>
+                <Pressable
+                  onPress={onClose}
+                  hitSlop={8}
+                  style={{ padding: 4 }}
+                >
+                  <X size={18} color={palette.ink} />
                 </Pressable>
               </View>
             ) : null}

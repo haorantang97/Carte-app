@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
-import tw from '@/lib/tw';
+
+import { palette, handFont, noteFont } from '@/lib/palette';
 
 export function EmptyState({
   title,
@@ -12,12 +13,41 @@ export function EmptyState({
   icon?: ReactNode;
 }) {
   return (
-    <View style={tw`flex-1 items-center justify-center px-6 py-12`}>
-      {icon && <View style={tw`mb-3 opacity-40`}>{icon}</View>}
-      <Text style={tw`text-base text-gray-700 text-center`}>{title}</Text>
-      {subtitle && (
-        <Text style={tw`mt-1 text-xs text-gray-500 text-center`}>{subtitle}</Text>
-      )}
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 24,
+        paddingVertical: 48,
+      }}
+    >
+      {icon ? <View style={{ marginBottom: 12, opacity: 0.4 }}>{icon}</View> : null}
+      <Text
+        style={{
+          fontFamily: handFont,
+          fontSize: 22,
+          color: palette.inkSoft,
+          textAlign: 'center',
+          lineHeight: 26,
+        }}
+      >
+        {title}
+      </Text>
+      {subtitle ? (
+        <Text
+          style={{
+            marginTop: 6,
+            fontFamily: noteFont,
+            fontSize: 13,
+            color: palette.inkMute,
+            textAlign: 'center',
+            lineHeight: 19,
+          }}
+        >
+          {subtitle}
+        </Text>
+      ) : null}
     </View>
   );
 }

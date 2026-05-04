@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Pressable, Switch, Text, View } from 'react-native';
+import { Switch, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw } from 'lucide-react-native';
+
 import { Sheet } from '@/components/ui/Sheet';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { Tappable } from '@/components/ui/Tappable';
+import { SketchBox, SketchCircle } from '@/components/ui/sketch';
 import {
   useCreateMenuGroup,
   useSetCartePassword,
@@ -17,7 +20,7 @@ import {
 } from '@/lib/carteCode';
 import { showToast } from '@/components/ui/Toast';
 import type { MenuGroup } from '@/types/domain';
-import tw from '@/lib/tw';
+import { palette, handFont, noteFont, uiFont } from '@/lib/palette';
 
 interface Props {
   visible: boolean;
@@ -127,7 +130,7 @@ export function MenuGroupSheet({ visible, onClose, group }: Props) {
       onClose={onClose}
       title={isEdit ? t('chef.editMenuGroup') : t('chef.createMenuGroup')}
     >
-      <View style={tw`gap-3 mt-1`}>
+      <View style={{ gap: 14, marginTop: 4 }}>
         <Input
           label={t('chef.groupName')}
           value={name}
@@ -135,75 +138,131 @@ export function MenuGroupSheet({ visible, onClose, group }: Props) {
           placeholder={t('chef.menuNamePlaceholder')}
           autoFocus={!isEdit}
           maxLength={40}
+          seed={200}
         />
 
         <View>
-          <Text style={tw`text-xs font-medium text-gray-700 mb-1.5`}>
+          <Text
+            style={{
+              fontFamily: handFont,
+              fontSize: 16,
+              color: palette.ink,
+              marginBottom: 6,
+            }}
+          >
             {t('chef.accessCode')}
           </Text>
-          <View style={tw`flex-row gap-2`}>
-            <View style={tw`flex-1`}>
-              <Input
-                value={code}
-                onChangeText={(v) => setCode(v.toUpperCase())}
-                autoCapitalize="characters"
-                maxLength={6}
-                style={[tw`text-base text-center`, { letterSpacing: 4, fontFamily: 'Menlo' }]}
-              />
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            <View style={{ flex: 1 }}>
+              <SketchBox
+                radius={12}
+                seed={201}
+                fillColor={palette.paper}
+                style={{ paddingHorizontal: 14, paddingVertical: 10 }}
+              >
+                <TextInput
+                  value={code}
+                  onChangeText={(v) => setCode(v.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                  autoCapitalize="characters"
+                  maxLength={6}
+                  placeholderTextColor={palette.inkMute}
+                  style={{
+                    fontFamily: uiFont,
+                    fontSize: 22,
+                    letterSpacing: 8,
+                    color: palette.ink,
+                    fontWeight: '700',
+                    textAlign: 'center',
+                    padding: 0,
+                    minHeight: 26,
+                  }}
+                />
+              </SketchBox>
             </View>
-            <Pressable
-              onPress={() => setCode(generateCarteCode())}
-              style={tw`w-12 h-12 items-center justify-center bg-gray-100 rounded-lg`}
-            >
-              <RefreshCw size={16} color="#404040" />
-            </Pressable>
+            <Tappable feedback="press" onPress={() => setCode(generateCarteCode())}>
+              <SketchCircle size={44} seed={202}>
+                <RefreshCw size={16} color={palette.ink} strokeWidth={1.6} />
+              </SketchCircle>
+            </Tappable>
           </View>
         </View>
 
         {/* Privacy + PIN inline */}
-        <View style={tw`bg-gray-50 rounded-lg p-3`}>
-          <View style={tw`flex-row items-center justify-between`}>
-            <View style={tw`flex-1`}>
-              <Text style={tw`text-sm font-medium text-gray-900`}>{t('chef.private')}</Text>
-              <Text style={tw`text-[11px] text-gray-500 mt-0.5`}>
+        <SketchBox
+          radius={14}
+          seed={203}
+          fillColor={palette.paper}
+          style={{ padding: 14 }}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  fontFamily: handFont,
+                  fontSize: 18,
+                  color: palette.ink,
+                  lineHeight: 20,
+                }}
+              >
+                {t('chef.private')}
+              </Text>
+              <Text
+                style={{
+                  fontFamily: noteFont,
+                  fontSize: 11,
+                  color: palette.inkSoft,
+                  marginTop: 2,
+                }}
+              >
                 {t('chef.enterPasswordToMakePrivate')}
               </Text>
             </View>
             <Switch
               value={isPrivate}
               onValueChange={setIsPrivate}
-              trackColor={{ false: '#D4D4D4', true: '#A68B6A' }}
-              thumbColor="white"
+              trackColor={{ false: palette.inkPale, true: palette.ink }}
+              thumbColor={palette.paper}
+              ios_backgroundColor={palette.inkPale}
             />
           </View>
           {isPrivate ? (
-            <View style={tw`mt-3`}>
+            <View style={{ marginTop: 12 }}>
               <Input
                 value={pin}
                 onChangeText={(v) => setPinValue(v.replace(/[^0-9]/g, '').slice(0, 8))}
                 keyboardType="number-pad"
                 secureTextEntry
                 maxLength={8}
-                placeholder={
-                  isEdit && wasPrivate
-                    ? '留空保持原 PIN'
-                    : '4–8 digits'
-                }
+                placeholder={isEdit && wasPrivate ? '留空保持原 PIN' : '4–8 digits'}
+                seed={204}
               />
             </View>
           ) : null}
-        </View>
+        </SketchBox>
 
-        <View style={tw`flex-row gap-2 mt-3`}>
-          <View style={tw`flex-1`}>
-            <Button label={t('common.cancel')} variant="outline" fullWidth onPress={onClose} />
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+          <View style={{ flex: 1 }}>
+            <Button
+              label={t('common.cancel')}
+              variant="outline"
+              fullWidth
+              onPress={onClose}
+              seed={205}
+            />
           </View>
-          <View style={tw`flex-1`}>
+          <View style={{ flex: 1 }}>
             <Button
               label={isEdit ? t('common.save') : t('common.create')}
               fullWidth
               loading={submitting}
               onPress={onSave}
+              seed={206}
             />
           </View>
         </View>

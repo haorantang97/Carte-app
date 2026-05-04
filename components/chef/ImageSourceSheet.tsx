@@ -1,8 +1,11 @@
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Camera, ImageIcon, Sparkles } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+
 import { Sheet } from '@/components/ui/Sheet';
-import tw from '@/lib/tw';
+import { Tappable } from '@/components/ui/Tappable';
+import { SketchBox, SketchCircle } from '@/components/ui/sketch';
+import { palette, handFont, noteFont } from '@/lib/palette';
 
 interface Props {
   visible: boolean;
@@ -18,37 +21,60 @@ interface OptionRowProps {
   Icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
   title: string;
   hint: string;
+  seed: number;
   onPress: () => void;
   disabled?: boolean;
   highlight?: boolean;
 }
 
-function OptionRow({ Icon, title, hint, onPress, disabled, highlight }: OptionRowProps) {
+function OptionRow({
+  Icon,
+  title,
+  hint,
+  seed,
+  onPress,
+  disabled,
+  highlight,
+}: OptionRowProps) {
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => [
-        tw.style(
-          'flex-row items-center bg-white border rounded-2xl p-4',
-          highlight ? 'border-[#A68B6A]' : 'border-gray-200',
-        ),
-        { opacity: disabled ? 0.4 : pressed ? 0.7 : 1 },
-      ]}
-    >
-      <View
-        style={tw.style(
-          'w-11 h-11 rounded-full items-center justify-center',
-          highlight ? 'bg-[#FAF6EE]' : 'bg-gray-100',
-        )}
-      >
-        <Icon size={20} color={highlight ? '#A68B6A' : '#171717'} strokeWidth={1.5} />
+    <Tappable feedback="lift" onPress={onPress} disabled={disabled}>
+      <View style={{ opacity: disabled ? 0.4 : 1 }}>
+        <SketchBox
+          radius={16}
+          seed={seed}
+          fillColor={palette.paper}
+          strokeWidth={highlight ? 2 : 1.5}
+          style={{ padding: 14, flexDirection: 'row', alignItems: 'center' }}
+        >
+          <SketchCircle size={42} seed={seed + 100}>
+            <Icon size={20} color={palette.ink} strokeWidth={1.5} />
+          </SketchCircle>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text
+              style={{
+                fontFamily: handFont,
+                fontSize: 22,
+                color: palette.ink,
+                lineHeight: 23,
+                fontWeight: highlight ? '700' : '400',
+              }}
+            >
+              {title}
+            </Text>
+            <Text
+              style={{
+                fontFamily: noteFont,
+                fontSize: 12,
+                color: palette.inkSoft,
+                marginTop: 2,
+              }}
+            >
+              {hint}
+            </Text>
+          </View>
+        </SketchBox>
       </View>
-      <View style={tw`flex-1 ml-3`}>
-        <Text style={tw`text-base font-medium text-gray-900`}>{title}</Text>
-        <Text style={tw`text-xs text-gray-500 mt-0.5`}>{hint}</Text>
-      </View>
-    </Pressable>
+    </Tappable>
   );
 }
 
@@ -68,17 +94,19 @@ export function ImageSourceSheet({
 
   return (
     <Sheet visible={visible} onClose={onClose} title="选择菜品图片来源">
-      <View style={tw`gap-2 mt-1 pb-2`}>
+      <View style={{ gap: 12, marginTop: 4, paddingBottom: 8 }}>
         <OptionRow
           Icon={ImageIcon}
           title="从相册选择"
           hint="挑一张已有的菜品照片"
+          seed={500}
           onPress={handle(onPickGallery)}
         />
         <OptionRow
           Icon={Camera}
           title="拍照"
           hint="现拍现传"
+          seed={501}
           onPress={handle(onPickCamera)}
         />
         <OptionRow
@@ -89,6 +117,7 @@ export function ImageSourceSheet({
               ? '根据菜名 + 描述生成手绘风格菜品图(约 60-90 秒)'
               : '先填写菜名,AI 才能根据它生成图'
           }
+          seed={502}
           onPress={handle(onPickAI)}
           disabled={!aiAvailable}
           highlight={aiAvailable}

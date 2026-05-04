@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Plus, X } from 'lucide-react-native';
-import tw from '@/lib/tw';
+
+import { Tappable } from '@/components/ui/Tappable';
+import { SketchBox, SketchPill, SketchCircle } from '@/components/ui/sketch';
+import { palette, handFont, noteFont } from '@/lib/palette';
 
 interface Props {
   value: string[];
@@ -31,51 +34,97 @@ export function IngredientsInput({ value, onChange, label }: Props) {
   return (
     <View>
       {label ? (
-        <Text style={tw`text-xs font-medium text-gray-700 mb-1.5`}>{label}</Text>
+        <Text
+          style={{
+            fontFamily: handFont,
+            fontSize: 16,
+            color: palette.ink,
+            marginBottom: 8,
+            lineHeight: 18,
+          }}
+        >
+          {label}
+        </Text>
       ) : null}
 
       {value.length > 0 ? (
-        <View style={tw`flex-row flex-wrap gap-1.5 mb-2`}>
-          {value.map((item) => (
-            <Pressable
+        <View
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 8,
+            marginBottom: 10,
+          }}
+        >
+          {value.map((item, i) => (
+            <Tappable
               key={item}
+              feedback="press"
               onPress={() => remove(item)}
-              style={tw`flex-row items-center bg-gray-100 rounded-full pl-3 pr-2 py-1.5`}
             >
-              <Text style={tw`text-xs text-gray-700`}>{item}</Text>
-              <View style={tw`ml-1.5 w-4 h-4 rounded-full bg-gray-300 items-center justify-center`}>
-                <X size={10} color="#525252" />
-              </View>
-            </Pressable>
+              <SketchPill seed={600 + i} style={{ paddingTop: 4, paddingBottom: 4 }}>
+                <Text
+                  style={{
+                    fontFamily: handFont,
+                    fontSize: 14,
+                    color: palette.ink,
+                  }}
+                >
+                  {item}
+                </Text>
+                <X size={11} color={palette.inkSoft} strokeWidth={2} />
+              </SketchPill>
+            </Tappable>
           ))}
         </View>
       ) : null}
 
-      <View style={tw`flex-row items-center gap-2`}>
-        <View style={tw`flex-1`}>
-          <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            placeholder={t('chef.continueAdding')}
-            placeholderTextColor="#A3A3A3"
-            onSubmitEditing={add}
-            blurOnSubmit={false}
-            returnKeyType="done"
-            style={tw`bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900`}
-          />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={{ flex: 1 }}>
+          <SketchBox
+            radius={12}
+            seed={650}
+            fillColor={palette.paper}
+            style={{ paddingHorizontal: 14, paddingVertical: 8 }}
+          >
+            <TextInput
+              value={draft}
+              onChangeText={setDraft}
+              placeholder={t('chef.continueAdding')}
+              placeholderTextColor={palette.inkMute}
+              onSubmitEditing={add}
+              blurOnSubmit={false}
+              returnKeyType="done"
+              style={{
+                fontFamily: handFont,
+                fontSize: 16,
+                color: palette.ink,
+                padding: 0,
+                minHeight: 24,
+              }}
+            />
+          </SketchBox>
         </View>
-        <Pressable
+        <Tappable
+          feedback="press"
           onPress={add}
           disabled={!draft.trim()}
-          style={({ pressed }) => [
-            tw`w-12 h-12 items-center justify-center bg-gray-900 rounded-lg`,
-            { opacity: !draft.trim() ? 0.4 : pressed ? 0.7 : 1 },
-          ]}
         >
-          <Plus size={16} color="white" />
-        </Pressable>
+          <View style={{ opacity: !draft.trim() ? 0.4 : 1 }}>
+            <SketchCircle size={44} seed={651}>
+              <Plus size={16} color={palette.ink} strokeWidth={1.6} />
+            </SketchCircle>
+          </View>
+        </Tappable>
       </View>
-      <Text style={tw`mt-1 text-[11px] text-gray-500`}>
+      <Text
+        style={{
+          marginTop: 6,
+          fontFamily: noteFont,
+          fontSize: 11,
+          color: palette.inkMute,
+        }}
+      >
         {t('chef.clickToAddIngredient')}
       </Text>
     </View>

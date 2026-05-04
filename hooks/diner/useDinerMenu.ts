@@ -29,6 +29,9 @@ export interface DinerDish {
   price: number;
   image_url: string | null;
   ingredients: string[];
+  cuisine: string | null;
+  total_time_min: number | null;
+  calories: number | null;
 }
 
 export const dinerMenuKey = (groupId: string) => ['diner-menu', groupId] as const;
@@ -58,7 +61,9 @@ export function useDinerMenu(groupId: string | undefined) {
           .order('created_at', { ascending: true }),
         supabase
           .from('dishes')
-          .select('id, category_id, name, description, price, image_url, ingredients')
+          .select(
+            'id, category_id, name, description, price, image_url, ingredients, cuisine, total_time_min, calories',
+          )
           .eq('group_id', groupId!)
           .order('sort_order', { ascending: true })
           .order('created_at', { ascending: true }),

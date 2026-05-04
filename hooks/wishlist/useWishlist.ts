@@ -61,8 +61,9 @@ export function useWishlist(groupId: string | undefined) {
   // Realtime: refetch on any wishlist change for this group
   useEffect(() => {
     if (!groupId) return;
+    const nonce = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`wishlist:${groupId}:${user?.id ?? 'anon'}`)
+      .channel(`wishlist:${groupId}:${user?.id ?? 'anon'}:${nonce}`)
       .on(
         'postgres_changes',
         {

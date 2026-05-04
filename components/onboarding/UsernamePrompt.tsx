@@ -1,17 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+
 import { useProfile, useUpdateProfile } from '@/hooks/auth/useProfile';
 import { Button } from '@/components/ui/Button';
+import { Tappable } from '@/components/ui/Tappable';
+import { SketchBox } from '@/components/ui/sketch';
 import { showToast } from '@/components/ui/Toast';
-import tw from '@/lib/tw';
+import { palette, handFont, noteFont } from '@/lib/palette';
 
-/**
- * Shown the first time a user lands on the Carte tab if their username is
- * still the default 'Guest'. Light-touch: input + skip button. Saving
- * updates the profile and dismisses; skipping just dismisses (won't show
- * again until next reload — we use AsyncStorage to remember dismissal).
- */
 export function UsernamePrompt() {
   const { t } = useTranslation();
   const { data: profile } = useProfile();
@@ -42,46 +39,108 @@ export function UsernamePrompt() {
   };
 
   return (
-    <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-      <View style={tw`flex-1 items-center justify-center bg-black/40 px-6`}>
-        <View style={tw`w-full max-w-sm bg-white rounded-2xl p-5`}>
-          <Text style={tw`text-base font-semibold text-gray-900`}>
-            {t('home.welcome')}
-          </Text>
-          <Text style={tw`mt-1 text-sm text-gray-600`}>叫你什么呢?</Text>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder={t('profile.username')}
-            placeholderTextColor="#A3A3A3"
-            autoFocus
-            maxLength={30}
-            returnKeyType="done"
-            onSubmitEditing={onSave}
-            style={tw`mt-4 bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900`}
-          />
-          <View style={tw`mt-4 flex-row gap-2`}>
-            <View style={tw`flex-1`}>
-              <Pressable
-                onPress={() => setOpen(false)}
-                style={({ pressed }) => [
-                  tw`px-4 py-3 items-center justify-center`,
-                  { opacity: pressed ? 0.5 : 1 },
-                ]}
+    <Modal
+      visible={open}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setOpen(false)}
+    >
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 28,
+          backgroundColor: 'rgba(30, 58, 138, 0.35)',
+        }}
+      >
+        <Pressable
+          onPress={() => setOpen(false)}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        />
+        <View style={{ width: '100%', maxWidth: 340 }}>
+          <SketchBox
+            radius={20}
+            seed={9}
+            fillColor={palette.paper}
+            style={{ padding: 22 }}
+          >
+            <Text
+              style={{
+                fontFamily: handFont,
+                fontSize: 28,
+                color: palette.ink,
+                lineHeight: 30,
+              }}
+            >
+              {t('home.welcome')}
+            </Text>
+            <Text
+              style={{
+                marginTop: 6,
+                fontFamily: noteFont,
+                fontSize: 14,
+                color: palette.inkSoft,
+              }}
+            >
+              叫你什么呢?
+            </Text>
+            <View style={{ marginTop: 16 }}>
+              <SketchBox
+                radius={12}
+                seed={11}
+                fillColor={palette.paper}
+                style={{ paddingHorizontal: 14, paddingVertical: 10 }}
               >
-                <Text style={tw`text-sm text-gray-500`}>稍后</Text>
-              </Pressable>
+                <TextInput
+                  value={name}
+                  onChangeText={setName}
+                  placeholder={t('profile.username')}
+                  placeholderTextColor={palette.inkMute}
+                  autoFocus
+                  maxLength={30}
+                  returnKeyType="done"
+                  onSubmitEditing={onSave}
+                  style={{
+                    fontFamily: handFont,
+                    fontSize: 20,
+                    color: palette.ink,
+                    padding: 0,
+                    minHeight: 24,
+                  }}
+                />
+              </SketchBox>
             </View>
-            <View style={tw`flex-1`}>
-              <Button
-                label={t('common.save')}
-                fullWidth
-                disabled={!name.trim()}
-                loading={submitting}
-                onPress={onSave}
-              />
+            <View
+              style={{ marginTop: 16, flexDirection: 'row', gap: 8 }}
+            >
+              <View style={{ flex: 1 }}>
+                <Tappable feedback="press" onPress={() => setOpen(false)}>
+                  <View style={{ paddingVertical: 12, alignItems: 'center' }}>
+                    <Text
+                      style={{
+                        fontFamily: handFont,
+                        fontSize: 18,
+                        color: palette.inkSoft,
+                      }}
+                    >
+                      稍后
+                    </Text>
+                  </View>
+                </Tappable>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button
+                  label={t('common.save')}
+                  fullWidth
+                  disabled={!name.trim()}
+                  loading={submitting}
+                  onPress={onSave}
+                  seed={13}
+                />
+              </View>
             </View>
-          </View>
+          </SketchBox>
         </View>
       </View>
     </Modal>

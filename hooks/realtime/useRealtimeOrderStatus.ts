@@ -17,8 +17,9 @@ export function useRealtimeOrderStatus() {
   useEffect(() => {
     if (!user?.id) return;
 
+    const nonce = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`orders:diner:${user.id}`)
+      .channel(`orders:diner:${user.id}:${nonce}`)
       .on(
         'postgres_changes',
         {

@@ -17,8 +17,9 @@ export function useRealtimeDishes(groupId: string | undefined) {
 
   useEffect(() => {
     if (!groupId) return;
+    const nonce = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`dishes:${groupId}:${user?.id ?? 'anon'}`)
+      .channel(`dishes:${groupId}:${user?.id ?? 'anon'}:${nonce}`)
       .on(
         'postgres_changes',
         {

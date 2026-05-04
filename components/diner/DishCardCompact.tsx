@@ -1,66 +1,175 @@
-import { Pressable, Text, View } from 'react-native';
-import { Image } from 'expo-image';
-import { Plus } from 'lucide-react-native';
+import { Text, View } from 'react-native';
+import { Minus, Plus, UtensilsCrossed } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import tw from '@/lib/tw';
-import type { DinerDish } from '@/hooks/diner/useDinerMenu';
+
+import { Tappable } from '@/components/ui/Tappable';
+import { SketchBox, SketchCircle, SketchPhoto } from '@/components/ui/sketch';
+import { palette, handFont, noteFont, titleFont } from '@/lib/palette';
+import { useResponsive } from '@/lib/responsive';
 import { formatPrice } from '@/lib/price';
+import type { DinerDish } from '@/hooks/diner/useDinerMenu';
 
 interface Props {
   dish: DinerDish;
+  index: number;
+  qty: number;
   onAdd: () => void;
+  onIncrement: () => void;
+  onDecrement: () => void;
 }
 
-export function DishCardCompact({ dish, onAdd }: Props) {
+export function DishCardCompact({
+  dish,
+  index,
+  qty,
+  onAdd,
+  onIncrement,
+  onDecrement,
+}: Props) {
+  const r = useResponsive();
+  const photoSize = r.scale(78, { min: 64, max: 108 });
+  const meta = [
+    dish.cuisine,
+    dish.total_time_min ? `${dish.total_time_min} min` : null,
+    dish.calories ? `${dish.calories} cal` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
-    <Pressable
-      onPress={() => {
-        Haptics.selectionAsync().catch(() => {});
-        router.push(`/dish/${dish.id}`);
-      }}
-      style={({ pressed }) => [
-        tw`flex-row bg-white border border-gray-200 rounded-xl p-3`,
-        { opacity: pressed ? 0.85 : 1 },
-      ]}
+    <SketchBox
+      radius={16}
+      seed={index + 1}
+      fillColor={palette.paper}
+      style={{ padding: 12 }}
     >
-      {dish.image_url ? (
-        <Image
-          source={{ uri: dish.image_url }}
-          style={tw`w-20 h-20 rounded-lg bg-gray-100`}
-          contentFit="cover"
-        />
-      ) : (
-        <View style={tw`w-20 h-20 rounded-lg bg-gray-100`} />
-      )}
-      <View style={tw`flex-1 ml-3 justify-between`}>
-        <View>
-          <Text style={tw`text-sm font-semibold text-gray-900`} numberOfLines={1}>
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        <Tappable
+          feedback="lift"
+          onPress={() => router.push(`/dish/${dish.id}` as any)}
+        >
+          {dish.image_url ? (
+            <SketchPhoto
+              src={dish.image_url}
+              radius={10}
+              seed={index + 5}
+              style={{ width: photoSize, height: photoSize, flexShrink: 0 }}
+            />
+          ) : (
+            <View
+              style={{
+                width: photoSize,
+                height: photoSize,
+                borderRadius: 10,
+                backgroundColor: palette.inkPale,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <UtensilsCrossed size={24} color={palette.ink} strokeWidth={1.4} />
+            </View>
+          )}
+        </Tappable>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text
+            style={{
+              fontFamily: handFont,
+              fontSize: r.fontScale(22, { min: 18, max: 26 }),
+              color: palette.ink,
+              lineHeight: r.fontScale(23, { min: 19, max: 27 }),
+            }}
+            numberOfLines={1}
+          >
             {dish.name}
           </Text>
           {dish.description ? (
-            <Text style={tw`mt-0.5 text-xs text-gray-500 leading-tight`} numberOfLines={2}>
+            <Text
+              style={{
+                fontFamily: noteFont,
+                fontSize: 12,
+                color: palette.inkSoft,
+                lineHeight: 17,
+                marginTop: 2,
+              }}
+              numberOfLines={2}
+            >
               {dish.description}
             </Text>
           ) : null}
-        </View>
-        <View style={tw`flex-row items-center justify-between`}>
-          <Text style={tw`text-sm font-medium text-[#A68B6A]`}>
-            {formatPrice(dish.price)}
-          </Text>
-          <Pressable
-            onPress={(e) => {
-              e.stopPropagation?.();
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-              onAdd();
+          {meta ? (
+            <Text
+              style={{
+                fontFamily: noteFont,
+                fontSize: 11,
+                color: palette.inkMute,
+                marginTop: 4,
+              }}
+              numberOfLines={1}
+            >
+              {meta}
+            </Text>
+          ) : null}
+          <View
+            style={{
+              marginTop: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
             }}
-            hitSlop={8}
-            style={tw`w-8 h-8 rounded-full bg-gray-900 items-center justify-center`}
           >
-            <Plus size={14} color="white" />
-          </Pressable>
+            <Text
+              style={{
+                fontFamily: titleFont,
+                fontStyle: 'italic',
+                fontSize: 18,
+                color: palette.ink,
+              }}
+            >
+              {Number(dish.price) > 0 ? formatPrice(Number(dish.price)) : ' '}
+            </Text>
+            {qty === 0 ? (
+              <Tappable
+                feedback="press"
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  onAdd();
+                }}
+              >
+                <SketchCircle size={32} seed={index + 7}>
+                  <Plus size={16} color={palette.ink} strokeWidth={1.6} />
+                </SketchCircle>
+              </Tappable>
+            ) : (
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              >
+                <Tappable feedback="press" onPress={onDecrement}>
+                  <SketchCircle size={26} seed={index + 8}>
+                    <Minus size={13} color={palette.ink} strokeWidth={1.6} />
+                  </SketchCircle>
+                </Tappable>
+                <Text
+                  style={{
+                    fontFamily: handFont,
+                    fontSize: 20,
+                    color: palette.ink,
+                    minWidth: 16,
+                    textAlign: 'center',
+                  }}
+                >
+                  {qty}
+                </Text>
+                <Tappable feedback="press" onPress={onIncrement}>
+                  <SketchCircle size={26} seed={index + 9}>
+                    <Plus size={13} color={palette.ink} strokeWidth={1.6} />
+                  </SketchCircle>
+                </Tappable>
+              </View>
+            )}
+          </View>
         </View>
       </View>
-    </Pressable>
+    </SketchBox>
   );
 }

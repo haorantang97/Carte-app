@@ -25,8 +25,9 @@ export function useRealtimeOrders(menuGroupIds: string[]) {
     if (!user?.id || menuGroupIds.length === 0) return;
     const idSet = new Set(menuGroupIds);
 
+    const nonce = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`orders:chef:${user.id}`)
+      .channel(`orders:chef:${user.id}:${nonce}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'orders' },

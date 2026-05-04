@@ -1,19 +1,21 @@
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Heart, Plus } from 'lucide-react-native';
+import { Plus, ThumbsUp } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+
+import { Tappable } from '@/components/ui/Tappable';
+import { SketchBox, SketchPill, SketchCircle } from '@/components/ui/sketch';
 import {
   useCreateWishlistItem,
   useToggleWishlistVote,
   useWishlist,
 } from '@/hooks/wishlist/useWishlist';
 import { showToast } from '@/components/ui/Toast';
-import tw from '@/lib/tw';
+import { palette, handFont, noteFont } from '@/lib/palette';
 
 interface Props {
   groupId: string;
-  /** When true (Diner view), show composer; chef-only views can pass false */
   canCompose?: boolean;
 }
 
@@ -43,71 +45,128 @@ export function WishlistSection({ groupId, canCompose = true }: Props) {
 
   return (
     <View>
-      <Text style={tw`text-xs font-medium text-gray-700 mb-2`}>{t('chef.wishlist')}</Text>
-
       {(items ?? []).length === 0 ? (
-        <Text style={tw`text-xs text-gray-500 mb-3`}>—</Text>
+        <Text
+          style={{
+            fontFamily: noteFont,
+            fontSize: 13,
+            color: palette.inkMute,
+            marginBottom: 12,
+            textAlign: 'center',
+            paddingVertical: 24,
+          }}
+        >
+          还没有 diner 投愿望
+        </Text>
       ) : (
-        <View style={tw`gap-2 mb-3`}>
-          {(items ?? []).map((row) => (
-            <View
+        <View style={{ gap: 10, marginBottom: 16 }}>
+          {(items ?? []).map((row, i) => (
+            <SketchBox
               key={row.id}
-              style={tw`flex-row items-center bg-white border border-gray-200 rounded-xl px-3 py-2`}
+              radius={14}
+              seed={i + 80}
+              fillColor={palette.paper}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
             >
-              <View style={tw`flex-1`}>
-                <Text style={tw`text-sm text-gray-900`}>{row.content}</Text>
-                <Text style={tw`text-[10px] text-gray-500 mt-0.5`}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  style={{
+                    fontFamily: handFont,
+                    fontSize: 16,
+                    color: palette.ink,
+                    lineHeight: 18,
+                  }}
+                >
+                  {row.content}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: noteFont,
+                    fontSize: 11,
+                    color: palette.inkMute,
+                    marginTop: 2,
+                  }}
+                  numberOfLines={1}
+                >
                   {row.requester_username}
                 </Text>
               </View>
-              <Pressable
-                onPress={() => onVote(row.id)}
-                hitSlop={6}
-                style={tw`flex-row items-center px-2 py-1 rounded-full bg-gray-50`}
-              >
-                <Heart
-                  size={12}
-                  color={row.voted_by_me ? '#A68B6A' : '#A3A3A3'}
-                  fill={row.voted_by_me ? '#A68B6A' : 'transparent'}
-                />
-                <Text
-                  style={tw.style(
-                    'ml-1 text-[11px] font-medium',
-                    row.voted_by_me ? 'text-[#A68B6A]' : 'text-gray-700',
-                  )}
+              <Tappable feedback="press" onPress={() => onVote(row.id)} hitSlop={6}>
+                <SketchPill
+                  active={row.voted_by_me}
+                  seed={i + 90}
+                  style={{ paddingTop: 3, paddingBottom: 3 }}
                 >
-                  {row.votes}
-                </Text>
-              </Pressable>
-            </View>
+                  <ThumbsUp
+                    size={11}
+                    color={palette.ink}
+                    strokeWidth={1.5}
+                    fill={row.voted_by_me ? palette.ink : 'transparent'}
+                  />
+                  <Text
+                    style={{
+                      fontFamily: handFont,
+                      fontSize: 13,
+                      color: palette.ink,
+                      fontWeight: row.voted_by_me ? '700' : '400',
+                    }}
+                  >
+                    {row.votes}
+                  </Text>
+                </SketchPill>
+              </Tappable>
+            </SketchBox>
           ))}
         </View>
       )}
 
       {canCompose ? (
-        <View style={tw`flex-row gap-2`}>
-          <View style={tw`flex-1`}>
-            <TextInput
-              value={draft}
-              onChangeText={setDraft}
-              placeholder={t('diner.addToWishlist')}
-              placeholderTextColor="#A3A3A3"
-              onSubmitEditing={onAdd}
-              blurOnSubmit={false}
-              returnKeyType="send"
-              style={tw`bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900`}
-            />
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ flex: 1 }}>
+            <SketchBox
+              radius={12}
+              seed={70}
+              fillColor={palette.paper}
+              style={{ paddingHorizontal: 12, paddingVertical: 8 }}
+            >
+              <TextInput
+                value={draft}
+                onChangeText={setDraft}
+                placeholder={t('diner.addToWishlist')}
+                placeholderTextColor={palette.inkMute}
+                onSubmitEditing={onAdd}
+                blurOnSubmit={false}
+                returnKeyType="send"
+                style={{
+                  fontFamily: handFont,
+                  fontSize: 16,
+                  color: palette.ink,
+                  padding: 0,
+                  minHeight: 22,
+                }}
+              />
+            </SketchBox>
           </View>
-          <Pressable
+          <Tappable
+            feedback="press"
             onPress={onAdd}
             disabled={!draft.trim() || create.isPending}
-            style={({ pressed }) => [
-              tw`w-10 h-10 items-center justify-center rounded-lg bg-gray-900`,
-              { opacity: !draft.trim() ? 0.4 : pressed ? 0.7 : 1 },
-            ]}
           >
-            <Plus size={14} color="white" />
-          </Pressable>
+            <View
+              style={{
+                opacity: !draft.trim() ? 0.4 : 1,
+              }}
+            >
+              <SketchCircle size={40} seed={71}>
+                <Plus size={16} color={palette.ink} strokeWidth={1.6} />
+              </SketchCircle>
+            </View>
+          </Tappable>
         </View>
       ) : null}
     </View>

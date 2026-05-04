@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
+
 import { Sheet } from '@/components/ui/Sheet';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { showToast } from '@/components/ui/Toast';
 import { useFindCarte, useJoinKitchen, type FoundCarte } from '@/hooks/diner/useJoinKitchen';
 import { isValidCarteCode, normalizeCarteCode } from '@/lib/carteCode';
-import tw from '@/lib/tw';
+import { palette, noteFont, uiFont } from '@/lib/palette';
 
 interface Props {
   visible: boolean;
@@ -85,7 +86,7 @@ export function JoinKitchenSheet({ visible, onClose, onJoined }: Props) {
 
   return (
     <Sheet visible={visible} onClose={onClose} title={t('diner.joinMenu')}>
-      <View style={tw`gap-3 mt-1`}>
+      <View style={{ gap: 14, marginTop: 4 }}>
         <Input
           label={t('diner.carteCodeLabel')}
           value={code}
@@ -94,7 +95,15 @@ export function JoinKitchenSheet({ visible, onClose, onJoined }: Props) {
           maxLength={6}
           autoFocus
           placeholder="ABCDEF"
-          style={[tw`text-base text-center`, { letterSpacing: 4, fontFamily: 'Menlo' }]}
+          style={{
+            fontSize: 22,
+            textAlign: 'center',
+            letterSpacing: 8,
+            fontFamily: uiFont,
+            fontWeight: '700',
+            color: palette.ink,
+          }}
+          seed={400}
         />
 
         {needsPin === true ? (
@@ -106,22 +115,39 @@ export function JoinKitchenSheet({ visible, onClose, onJoined }: Props) {
             secureTextEntry
             maxLength={8}
             placeholder="••••"
+            seed={401}
           />
         ) : needsPin === false ? (
-          <Text style={tw`text-xs text-gray-500 -mt-1`}>{t('diner.publicCarteNoPin')}</Text>
+          <Text
+            style={{
+              fontFamily: noteFont,
+              fontSize: 12,
+              color: palette.inkSoft,
+              marginTop: -4,
+            }}
+          >
+            {t('diner.publicCarteNoPin')}
+          </Text>
         ) : null}
 
-        <View style={tw`flex-row gap-2 mt-3`}>
-          <View style={tw`flex-1`}>
-            <Button label={t('common.cancel')} variant="outline" fullWidth onPress={onClose} />
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+          <View style={{ flex: 1 }}>
+            <Button
+              label={t('common.cancel')}
+              variant="outline"
+              fullWidth
+              onPress={onClose}
+              seed={402}
+            />
           </View>
-          <View style={tw`flex-1`}>
+          <View style={{ flex: 1 }}>
             <Button
               label={t('common.join')}
               fullWidth
               loading={submitting}
               disabled={code.length !== 6 || (needsPin === true && pin.length === 0)}
               onPress={onSubmit}
+              seed={403}
             />
           </View>
         </View>

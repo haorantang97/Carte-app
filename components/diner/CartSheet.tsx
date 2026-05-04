@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { Image } from 'expo-image';
+import { ScrollView, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Minus, Plus, Trash2 } from 'lucide-react-native';
+
 import { Sheet } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Tappable } from '@/components/ui/Tappable';
 import { showToast } from '@/components/ui/Toast';
-import { useCart } from '@/stores/cartStore';
+import { SketchBox, SketchCircle, SketchPhoto } from '@/components/ui/sketch';
+import { useCart, type CartItem } from '@/stores/cartStore';
 import { useCreateOrder } from '@/hooks/orders/useCreateOrder';
 import { formatPrice, parsePrice } from '@/lib/price';
-import tw from '@/lib/tw';
+import { palette, handFont, noteFont, titleFont } from '@/lib/palette';
 
 interface Props {
   visible: boolean;
@@ -18,11 +20,14 @@ interface Props {
   groupId: string;
 }
 
+// Stable empty-array reference — see diner/group/[id].tsx for why this matters.
+const EMPTY_CART: CartItem[] = [];
+
 export function CartSheet({ visible, onClose, groupId }: Props) {
   const { t } = useTranslation();
-  const items = useCart((s) => s.cartByGroup[groupId] ?? []);
+  const itemsRaw = useCart((s) => s.cartByGroup[groupId]);
+  const items = itemsRaw ?? EMPTY_CART;
   const setQty = useCart((s) => s.setQuantity);
-  const remove = useCart((s) => s.remove);
   const submit = useCreateOrder();
 
   const [tipStr, setTipStr] = useState('');
@@ -52,58 +57,105 @@ export function CartSheet({ visible, onClose, groupId }: Props) {
     <Sheet visible={visible} onClose={onClose} title={t('diner.placeOrder')}>
       <ScrollView style={{ maxHeight: 480 }} showsVerticalScrollIndicator={false}>
         {items.length === 0 ? (
-          <View style={tw`py-8 items-center`}>
-            <Text style={tw`text-sm text-gray-500`}>{t('diner.addToCart')}</Text>
+          <View style={{ paddingVertical: 32, alignItems: 'center' }}>
+            <Text
+              style={{ fontFamily: handFont, fontSize: 18, color: palette.inkSoft }}
+            >
+              购物车是空的
+            </Text>
           </View>
         ) : (
-          <View style={tw`gap-2`}>
-            {items.map((it) => (
-              <View
+          <View style={{ gap: 8 }}>
+            {items.map((it, i) => (
+              <SketchBox
                 key={it.dishId}
-                style={tw`flex-row items-center bg-white rounded-lg border border-gray-200 p-2`}
+                radius={14}
+                seed={i + 30}
+                fillColor={palette.paper}
+                style={{ padding: 8, flexDirection: 'row', alignItems: 'center' }}
               >
                 {it.imageUrl ? (
-                  <Image
-                    source={{ uri: it.imageUrl }}
-                    style={tw`w-12 h-12 rounded bg-gray-100`}
-                    contentFit="cover"
+                  <SketchPhoto
+                    src={it.imageUrl}
+                    radius={8}
+                    seed={i + 40}
+                    style={{ width: 48, height: 48 }}
                   />
                 ) : (
-                  <View style={tw`w-12 h-12 rounded bg-gray-100`} />
+                  <View
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 8,
+                      backgroundColor: palette.inkPale,
+                    }}
+                  />
                 )}
-                <View style={tw`flex-1 ml-3`}>
-                  <Text style={tw`text-sm font-medium text-gray-900`} numberOfLines={1}>
+                <View style={{ flex: 1, marginLeft: 12, minWidth: 0 }}>
+                  <Text
+                    style={{
+                      fontFamily: handFont,
+                      fontSize: 16,
+                      color: palette.ink,
+                      lineHeight: 18,
+                    }}
+                    numberOfLines={1}
+                  >
                     {it.dishName}
                   </Text>
-                  <Text style={tw`text-xs text-gray-500 mt-0.5`}>
-                    {formatPrice(it.price)} × {it.quantity} = {formatPrice(it.price * it.quantity)}
+                  <Text
+                    style={{
+                      fontFamily: noteFont,
+                      fontSize: 12,
+                      color: palette.inkSoft,
+                      marginTop: 2,
+                    }}
+                  >
+                    {formatPrice(it.price)} × {it.quantity} ={' '}
+                    {formatPrice(it.price * it.quantity)}
                   </Text>
                 </View>
-                <View style={tw`flex-row items-center gap-1`}>
-                  <Pressable
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                >
+                  <Tappable
+                    feedback="press"
                     onPress={() => setQty(groupId, it.dishId, it.quantity - 1)}
-                    style={tw`w-7 h-7 rounded-full border border-gray-200 items-center justify-center`}
                   >
-                    {it.quantity === 1 ? (
-                      <Trash2 size={12} color="#A30000" />
-                    ) : (
-                      <Minus size={12} color="#404040" />
-                    )}
-                  </Pressable>
-                  <Text style={tw`text-sm w-5 text-center`}>{it.quantity}</Text>
-                  <Pressable
+                    <SketchCircle size={26} seed={i + 50}>
+                      {it.quantity === 1 ? (
+                        <Trash2 size={12} color="#A30000" strokeWidth={1.6} />
+                      ) : (
+                        <Minus size={12} color={palette.ink} strokeWidth={1.6} />
+                      )}
+                    </SketchCircle>
+                  </Tappable>
+                  <Text
+                    style={{
+                      fontFamily: handFont,
+                      fontSize: 16,
+                      color: palette.ink,
+                      width: 18,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {it.quantity}
+                  </Text>
+                  <Tappable
+                    feedback="press"
                     onPress={() => setQty(groupId, it.dishId, it.quantity + 1)}
-                    style={tw`w-7 h-7 rounded-full bg-gray-900 items-center justify-center`}
                   >
-                    <Plus size={12} color="white" />
-                  </Pressable>
+                    <SketchCircle size={26} seed={i + 60}>
+                      <Plus size={12} color={palette.ink} strokeWidth={1.6} />
+                    </SketchCircle>
+                  </Tappable>
                 </View>
-              </View>
+              </SketchBox>
             ))}
           </View>
         )}
 
-        <View style={tw`mt-4 gap-3`}>
+        <View style={{ marginTop: 16, gap: 12 }}>
           <Input
             label={t('chef.shoppingList')}
             value={notes}
@@ -111,7 +163,8 @@ export function CartSheet({ visible, onClose, groupId }: Props) {
             placeholder=""
             multiline
             numberOfLines={2}
-            style={tw`min-h-16 py-2`}
+            style={{ minHeight: 56 }}
+            seed={70}
           />
           <Input
             label="Tip"
@@ -119,31 +172,87 @@ export function CartSheet({ visible, onClose, groupId }: Props) {
             onChangeText={setTipStr}
             keyboardType="decimal-pad"
             placeholder="0.00"
+            seed={71}
           />
         </View>
 
-        <View style={tw`mt-4 pt-3 border-t border-gray-200`}>
-          <View style={tw`flex-row justify-between mb-1`}>
-            <Text style={tw`text-xs text-gray-500`}>Subtotal</Text>
-            <Text style={tw`text-xs text-gray-700`}>{formatPrice(subtotal)}</Text>
+        <View
+          style={{
+            marginTop: 16,
+            paddingTop: 12,
+            borderTopWidth: 1,
+            borderTopColor: palette.inkPale,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              marginBottom: 4,
+            }}
+          >
+            <Text
+              style={{ fontFamily: noteFont, fontSize: 12, color: palette.inkSoft }}
+            >
+              小计
+            </Text>
+            <Text
+              style={{ fontFamily: noteFont, fontSize: 12, color: palette.ink }}
+            >
+              {formatPrice(subtotal)}
+            </Text>
           </View>
-          <View style={tw`flex-row justify-between mb-2`}>
-            <Text style={tw`text-xs text-gray-500`}>Tip</Text>
-            <Text style={tw`text-xs text-gray-700`}>{formatPrice(tip)}</Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              marginBottom: 8,
+            }}
+          >
+            <Text
+              style={{ fontFamily: noteFont, fontSize: 12, color: palette.inkSoft }}
+            >
+              小费
+            </Text>
+            <Text
+              style={{ fontFamily: noteFont, fontSize: 12, color: palette.ink }}
+            >
+              {formatPrice(tip)}
+            </Text>
           </View>
-          <View style={tw`flex-row justify-between`}>
-            <Text style={tw`text-sm font-semibold text-gray-900`}>Total</Text>
-            <Text style={tw`text-sm font-semibold text-gray-900`}>{formatPrice(total)}</Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Text
+              style={{ fontFamily: handFont, fontSize: 18, color: palette.ink }}
+            >
+              合计
+            </Text>
+            <Text
+              style={{
+                fontFamily: titleFont,
+                fontStyle: 'italic',
+                fontSize: 22,
+                color: palette.ink,
+                fontWeight: '700',
+              }}
+            >
+              {formatPrice(total)}
+            </Text>
           </View>
         </View>
 
-        <View style={tw`mt-4`}>
+        <View style={{ marginTop: 16 }}>
           <Button
             label={t('diner.placeOrder')}
             fullWidth
             loading={submit.isPending}
             disabled={items.length === 0}
             onPress={onPlace}
+            seed={80}
           />
         </View>
       </ScrollView>

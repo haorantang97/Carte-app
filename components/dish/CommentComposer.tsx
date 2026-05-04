@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Send } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+
+import { Tappable } from '@/components/ui/Tappable';
+import { SketchBox, SketchCircle } from '@/components/ui/sketch';
 import { showToast } from '@/components/ui/Toast';
 import { usePostComment } from '@/hooks/dish/useDishComments';
-import tw from '@/lib/tw';
+import { palette, handFont } from '@/lib/palette';
 
 interface Props {
   dishId: string;
@@ -29,32 +32,43 @@ export function CommentComposer({ dishId }: Props) {
   };
 
   return (
-    <View style={tw`flex-row items-center gap-2`}>
-      <View style={tw`flex-1`}>
-        <TextInput
-          value={text}
-          onChangeText={setText}
-          placeholder={t('dish.writeComment')}
-          placeholderTextColor="#A3A3A3"
-          style={tw`bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm text-gray-900`}
-          returnKeyType="send"
-          onSubmitEditing={submit}
-          blurOnSubmit={false}
-        />
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <View style={{ flex: 1 }}>
+        <SketchBox
+          radius={999}
+          seed={120}
+          fillColor={palette.paper}
+          style={{ paddingHorizontal: 16, paddingVertical: 8 }}
+        >
+          <TextInput
+            value={text}
+            onChangeText={setText}
+            placeholder={t('dish.writeComment')}
+            placeholderTextColor={palette.inkMute}
+            style={{
+              fontFamily: handFont,
+              fontSize: 16,
+              color: palette.ink,
+              padding: 0,
+              minHeight: 22,
+            }}
+            returnKeyType="send"
+            onSubmitEditing={submit}
+            blurOnSubmit={false}
+          />
+        </SketchBox>
       </View>
-      <Pressable
+      <Tappable
+        feedback="press"
         onPress={submit}
         disabled={!text.trim() || post.isPending}
-        style={({ pressed }) => [
-          tw`w-10 h-10 rounded-full items-center justify-center`,
-          {
-            backgroundColor: text.trim() ? '#A68B6A' : '#E5E5E5',
-            opacity: pressed ? 0.7 : 1,
-          },
-        ]}
       >
-        <Send size={14} color="white" />
-      </Pressable>
+        <View style={{ opacity: !text.trim() ? 0.4 : 1 }}>
+          <SketchCircle size={40} seed={121}>
+            <Send size={14} color={palette.ink} strokeWidth={1.6} />
+          </SketchCircle>
+        </View>
+      </Tappable>
     </View>
   );
 }

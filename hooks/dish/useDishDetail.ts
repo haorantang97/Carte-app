@@ -107,11 +107,15 @@ export function useDishDetail(dishId: string | undefined) {
     },
   });
 
-  // Realtime: keep this dish's like count fresh while DishDetail is mounted
+  // Realtime: keep this dish's like count fresh while DishDetail is mounted.
+  // Channel names need a nonce: under React StrictMode double-mount, the
+  // first mount's removeChannel races with the second mount's subscribe;
+  // re-using the same channel name makes the second .on() error out.
   useEffect(() => {
     if (!dishId) return;
+    const nonce = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`dish_likes:detail:${dishId}:${user?.id ?? 'anon'}`)
+      .channel(`dish_likes:detail:${dishId}:${user?.id ?? 'anon'}:${nonce}`)
       .on(
         'postgres_changes',
         {

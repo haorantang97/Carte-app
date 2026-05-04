@@ -10,6 +10,7 @@ import {
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { Camera } from 'lucide-react-native';
+
 import { Sheet } from '@/components/ui/Sheet';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -21,7 +22,7 @@ import { usePickAndUploadImage } from '@/hooks/storage/useImageUpload';
 import { useGenerateDishImage } from '@/hooks/storage/useGenerateDishImage';
 import type { Dish } from '@/types/domain';
 import { parsePrice } from '@/lib/price';
-import tw from '@/lib/tw';
+import { palette, handFont, noteFont } from '@/lib/palette';
 
 // 保留这两个 type export 是为了向后兼容(chef/group/[id].tsx 还 import 着),
 // 实际运行时 mode 永远是 'manual',prefill 永远是 null。AI 路径已经走非阻塞
@@ -191,35 +192,69 @@ export function DishSheet({
       title={dish ? t('chef.editDish') : t('chef.addDish')}
     >
       <ScrollView style={{ maxHeight: 580 }} showsVerticalScrollIndicator={false}>
-        <View style={tw`gap-3 mt-1`}>
+        <View style={{ gap: 14, marginTop: 4 }}>
           {/* Image preview area — tap to open ImageSourceSheet (3 options) */}
           <Pressable
             onPress={() => !isBusyImage && setImgSourceOpen(true)}
             disabled={isBusyImage}
-            style={tw`bg-gray-100 rounded-xl overflow-hidden`}
+            style={{
+              backgroundColor: palette.inkPale,
+              borderRadius: 12,
+              overflow: 'hidden',
+            }}
           >
             {imageUrl && !isBusyImage ? (
               <Image
                 source={{ uri: imageUrl }}
-                style={[tw`w-full`, { aspectRatio: 1 }]}
+                style={{ width: '100%', aspectRatio: 1 }}
                 contentFit="cover"
               />
             ) : (
-              <View style={[tw`w-full items-center justify-center`, { aspectRatio: 1 }]}>
+              <View
+                style={{
+                  width: '100%',
+                  aspectRatio: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
                 {generate.isPending ? (
                   <>
-                    <ActivityIndicator size="small" color="#A68B6A" />
-                    <Text style={tw`mt-2 text-xs text-[#A68B6A] font-medium`}>
+                    <ActivityIndicator size="small" color={palette.ink} />
+                    <Text
+                      style={{
+                        marginTop: 8,
+                        fontFamily: handFont,
+                        fontSize: 14,
+                        color: palette.ink,
+                      }}
+                    >
                       AI 正在画…
                     </Text>
-                    <Text style={tw`mt-1 text-[10px] text-gray-500`}>约 60-90 秒</Text>
+                    <Text
+                      style={{
+                        marginTop: 4,
+                        fontFamily: noteFont,
+                        fontSize: 11,
+                        color: palette.inkSoft,
+                      }}
+                    >
+                      约 60-90 秒
+                    </Text>
                   </>
                 ) : upload.isPending ? (
-                  <ActivityIndicator size="small" color="#737373" />
+                  <ActivityIndicator size="small" color={palette.ink} />
                 ) : (
                   <>
-                    <Camera size={20} color="#737373" />
-                    <Text style={tw`mt-1 text-xs text-gray-500`}>
+                    <Camera size={22} color={palette.ink} strokeWidth={1.5} />
+                    <Text
+                      style={{
+                        marginTop: 6,
+                        fontFamily: handFont,
+                        fontSize: 14,
+                        color: palette.ink,
+                      }}
+                    >
                       点击上传 / 拍照 / AI 生图
                     </Text>
                   </>
@@ -242,7 +277,7 @@ export function DishSheet({
             placeholder={t('chef.dishDescriptionPlaceholder')}
             multiline
             numberOfLines={3}
-            style={tw`min-h-20 py-2`}
+            style={{ minHeight: 80, paddingVertical: 8 }}
           />
 
           <Input
@@ -266,29 +301,52 @@ export function DishSheet({
               onChangeText={setRecipe}
               multiline
               numberOfLines={3}
-              style={tw`min-h-20 py-2`}
+              style={{ minHeight: 80, paddingVertical: 8 }}
             />
-            <View style={tw`mt-2 flex-row items-center justify-between`}>
-              <Text style={tw`text-xs text-gray-700`}>{t('chef.recipeIsPrivate')}</Text>
+            <View
+              style={{
+                marginTop: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Text style={{ fontFamily: handFont, fontSize: 16, color: palette.ink }}>
+                {t('chef.recipeIsPrivate')}
+              </Text>
               <Switch
                 value={recipeIsPrivate}
                 onValueChange={setRecipeIsPrivate}
-                trackColor={{ false: '#D4D4D4', true: '#A68B6A' }}
-                thumbColor="white"
+                trackColor={{ false: palette.inkPale, true: palette.ink }}
+                thumbColor={palette.paper}
+                ios_backgroundColor={palette.inkPale}
               />
             </View>
           </View>
 
-          <View style={tw`flex-row gap-2 mt-3`}>
-            <View style={tw`flex-1`}>
-              <Button label={t('common.cancel')} variant="outline" fullWidth onPress={onClose} />
+          <View
+            style={{
+              flexDirection: 'row',
+              gap: 8,
+              marginTop: 12,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Button
+                label={t('common.cancel')}
+                variant="outline"
+                fullWidth
+                onPress={onClose}
+                seed={700}
+              />
             </View>
-            <View style={tw`flex-1`}>
+            <View style={{ flex: 1 }}>
               <Button
                 label={dish ? t('common.save') : t('common.create')}
                 fullWidth
                 loading={submitting}
                 onPress={onSave}
+                seed={701}
               />
             </View>
           </View>

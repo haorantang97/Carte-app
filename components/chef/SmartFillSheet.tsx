@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -12,11 +11,14 @@ import { useTranslation } from 'react-i18next';
 import { Camera, Link2, Sparkles, Type as TypeIcon } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+
 import { Sheet } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/Button';
+import { Tappable } from '@/components/ui/Tappable';
+import { SketchBox, SketchPill } from '@/components/ui/sketch';
 import { showToast } from '@/components/ui/Toast';
 import { useStartExtractDish } from '@/hooks/storage/useStartExtractDish';
-import tw from '@/lib/tw';
+import { palette, handFont, noteFont } from '@/lib/palette';
 
 type Mode = 'text' | 'image' | 'url';
 
@@ -283,166 +285,263 @@ export function SmartFillSheet({
 
   return (
     <Sheet visible={visible} onClose={handleClose} title="✨ 智能填充菜品">
-      <View style={tw`gap-3 mt-1`}>
+      <View style={{ gap: 14, marginTop: 4 }}>
         {/* Mode picker */}
-        <View style={tw`flex-row gap-2`}>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
           {(
             [
               { key: 'url', icon: Link2, label: '粘贴链接' },
               { key: 'text', icon: TypeIcon, label: '文字描述' },
               { key: 'image', icon: Camera, label: '上传图片' },
             ] as const
-          ).map(({ key, icon: Icon, label }) => {
+          ).map(({ key, icon: Icon, label }, i) => {
             const active = mode === key;
             return (
-              <Pressable
-                key={key}
-                onPress={() => setMode(key)}
-                disabled={start.isPending}
-                style={tw.style(
-                  'flex-1 items-center py-3 rounded-lg border',
-                  active ? 'bg-gray-900 border-gray-900' : 'bg-white border-gray-200',
-                )}
-              >
-                <Icon size={16} color={active ? 'white' : '#404040'} />
-                <Text
-                  style={tw.style(
-                    'mt-1 text-[10px] font-medium',
-                    active ? 'text-white' : 'text-gray-700',
-                  )}
+              <View key={key} style={{ flex: 1 }}>
+                <Tappable
+                  feedback="press"
+                  onPress={() => setMode(key)}
+                  disabled={start.isPending}
                 >
-                  {label}
-                </Text>
-              </Pressable>
+                  <SketchBox
+                    radius={12}
+                    seed={300 + i}
+                    fillColor={palette.paper}
+                    strokeWidth={active ? 2 : 1.3}
+                    style={{ paddingVertical: 12, alignItems: 'center' }}
+                  >
+                    <Icon size={18} color={palette.ink} strokeWidth={1.5} />
+                    <Text
+                      style={{
+                        marginTop: 4,
+                        fontFamily: handFont,
+                        fontSize: 13,
+                        color: palette.ink,
+                        fontWeight: active ? '700' : '400',
+                      }}
+                    >
+                      {label}
+                    </Text>
+                  </SketchBox>
+                </Tappable>
+              </View>
             );
           })}
         </View>
 
         {/* Inputs */}
         {mode === 'url' && (
-          <View style={tw`gap-2`}>
-            <TextInput
-              value={url}
-              onChangeText={setUrl}
-              placeholder="贴整段分享文案也可以,自动识别 URL"
-              placeholderTextColor="#A3A3A3"
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!start.isPending}
-              multiline
-              style={tw`bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 min-h-12`}
-            />
+          <View style={{ gap: 8 }}>
+            <SketchBox
+              radius={12}
+              seed={310}
+              fillColor={palette.paper}
+              style={{ paddingHorizontal: 14, paddingVertical: 10 }}
+            >
+              <TextInput
+                value={url}
+                onChangeText={setUrl}
+                placeholder="贴整段分享文案也可以,自动识别 URL"
+                placeholderTextColor={palette.inkMute}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!start.isPending}
+                multiline
+                style={{
+                  fontFamily: handFont,
+                  fontSize: 16,
+                  color: palette.ink,
+                  padding: 0,
+                  minHeight: 48,
+                }}
+              />
+            </SketchBox>
             {(() => {
               const trimmed = url.trim();
               if (!trimmed) return null;
               const extracted = extractUrlFromText(trimmed);
               if (extracted && extracted !== trimmed) {
                 return (
-                  <Text style={tw`text-[11px] text-emerald-700`}>
+                  <Text
+                    style={{
+                      fontFamily: noteFont,
+                      fontSize: 11,
+                      color: '#0A6E2A',
+                    }}
+                  >
                     ✓ 识别到链接: {extracted}
                   </Text>
                 );
               }
               if (!extracted && !/^https?:\/\//i.test(trimmed)) {
                 return (
-                  <Text style={tw`text-[11px] text-red-600`}>
+                  <Text
+                    style={{
+                      fontFamily: noteFont,
+                      fontSize: 11,
+                      color: '#A30000',
+                    }}
+                  >
                     没在文本里找到 http/https 开头的链接
                   </Text>
                 );
               }
               return null;
             })()}
-            <Text style={tw`text-[11px] text-gray-500 leading-relaxed`}>
+            <Text
+              style={{
+                fontFamily: noteFont,
+                fontSize: 11,
+                color: palette.inkSoft,
+                lineHeight: 16,
+              }}
+            >
               支持:YouTube / B站 / 抖音 / 小红书 / TikTok / Instagram / Facebook /
-              快手 / 微博 / 知乎 / Allrecipes / 下厨房 等几十个平台。视频会自动提取字幕,
-              图文笔记自动识别多图内容。
+              快手 / 微博 / 知乎 / Allrecipes / 下厨房 等几十个平台
             </Text>
           </View>
         )}
 
         {mode === 'text' && (
-          <View>
+          <SketchBox
+            radius={12}
+            seed={311}
+            fillColor={palette.paper}
+            style={{ paddingHorizontal: 14, paddingVertical: 10 }}
+          >
             <TextInput
               value={text}
               onChangeText={setText}
               placeholder="比如:我想做奶奶的红烧肉,五花肉切方块炖到酥软,要带点甜味…"
-              placeholderTextColor="#A3A3A3"
+              placeholderTextColor={palette.inkMute}
               multiline
               numberOfLines={5}
               editable={!start.isPending}
-              style={tw`bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 min-h-32`}
+              style={{
+                fontFamily: handFont,
+                fontSize: 16,
+                color: palette.ink,
+                padding: 0,
+                minHeight: 120,
+              }}
             />
-          </View>
+          </SketchBox>
         )}
 
         {mode === 'image' && (
-          <View>
-            <Pressable
-              onPress={pickImage}
-              disabled={start.isPending}
-              style={tw`bg-gray-100 rounded-xl overflow-hidden`}
-            >
-              {imagePreview ? (
-                <Image
-                  source={{ uri: imagePreview }}
-                  style={[tw`w-full`, { aspectRatio: 1 }]}
-                  contentFit="cover"
-                />
-              ) : (
-                <View
-                  style={[
-                    tw`w-full items-center justify-center`,
-                    { aspectRatio: 1 },
-                  ]}
+          <Pressable
+            onPress={pickImage}
+            disabled={start.isPending}
+            style={{
+              backgroundColor: palette.inkPale,
+              borderRadius: 12,
+              overflow: 'hidden',
+            }}
+          >
+            {imagePreview ? (
+              <Image
+                source={{ uri: imagePreview }}
+                style={{ width: '100%', aspectRatio: 1 }}
+                contentFit="cover"
+              />
+            ) : (
+              <View
+                style={{
+                  width: '100%',
+                  aspectRatio: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Camera size={26} color={palette.ink} strokeWidth={1.5} />
+                <Text
+                  style={{
+                    marginTop: 8,
+                    fontFamily: handFont,
+                    fontSize: 16,
+                    color: palette.ink,
+                  }}
                 >
-                  <Camera size={24} color="#737373" />
-                  <Text style={tw`mt-2 text-xs text-gray-500`}>
-                    点击选择菜品照片
-                  </Text>
-                  <Text style={tw`mt-1 text-[10px] text-gray-400`}>
-                    AI 会识别食物、估算食材和做法
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
+                  点击选择菜品照片
+                </Text>
+                <Text
+                  style={{
+                    marginTop: 4,
+                    fontFamily: noteFont,
+                    fontSize: 11,
+                    color: palette.inkSoft,
+                  }}
+                >
+                  AI 会识别食物、估算食材和做法
+                </Text>
+              </View>
+            )}
+          </Pressable>
         )}
 
-        {/* Error banner — Toast 在 sheet 上方时可能被挡,这里兜底显示 */}
+        {/* Error banner */}
         {lastError && !start.isPending && (
-          <View
-            style={tw`bg-red-50 border border-red-200 rounded-lg px-3 py-2.5`}
+          <SketchBox
+            radius={10}
+            seed={312}
+            color="#A30000"
+            fillColor="#FFF5F5"
+            style={{ paddingHorizontal: 12, paddingVertical: 10 }}
           >
-            <Text style={tw`text-xs text-red-700 leading-relaxed`}>
+            <Text
+              style={{
+                fontFamily: noteFont,
+                fontSize: 12,
+                color: '#A30000',
+                lineHeight: 18,
+              }}
+            >
               {lastError}
+            </Text>
+          </SketchBox>
+        )}
+
+        {/* Mini spinner */}
+        {start.isPending && (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              paddingVertical: 4,
+            }}
+          >
+            <ActivityIndicator size="small" color={palette.ink} />
+            <Text
+              style={{
+                fontFamily: handFont,
+                fontSize: 14,
+                color: palette.ink,
+              }}
+            >
+              正在加入队列…
             </Text>
           </View>
         )}
 
-        {/* 提交瞬间的微 spinner — 之后非阻塞,sheet 自己会关 */}
-        {start.isPending && (
-          <View style={tw`flex-row items-center gap-2 py-2`}>
-            <ActivityIndicator size="small" color="#A68B6A" />
-            <Text style={tw`text-xs text-[#A68B6A]`}>正在加入队列…</Text>
-          </View>
-        )}
-
-        <View style={tw`flex-row gap-2 mt-2`}>
-          <View style={tw`flex-1`}>
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+          <View style={{ flex: 1 }}>
             <Button
               label="取消"
               variant="outline"
               fullWidth
               onPress={handleClose}
               disabled={start.isPending}
+              seed={320}
             />
           </View>
-          <View style={tw`flex-1`}>
+          <View style={{ flex: 1 }}>
             <Button
               label={start.isPending ? '生成中…' : '生成菜谱'}
               fullWidth
               loading={start.isPending}
               onPress={submit}
+              seed={321}
             />
           </View>
         </View>
@@ -460,44 +559,81 @@ function ProgressStages({ mode, url }: { mode: Mode; url: string }) {
   const stages = stagesFor(path, mode);
   const { elapsed, current } = useStageProgress(true, stages);
 
-  // 找到当前阶段在 stages 里的 index 用于高亮已完成项
   const currentIdx = stages.findIndex((s) => s.label === current.label);
 
   return (
-    <View style={tw`bg-[#FAF6EE] border border-[#E8DEC8] rounded-lg px-3 py-3 gap-2`}>
-      <View style={tw`flex-row items-center gap-2`}>
-        <ActivityIndicator size="small" color="#A68B6A" />
-        <Text style={tw`text-xs font-medium text-[#A68B6A] flex-1`}>
+    <SketchBox
+      radius={12}
+      seed={330}
+      fillColor={palette.paper}
+      style={{ paddingHorizontal: 14, paddingVertical: 12, gap: 8 }}
+    >
+      <View
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+      >
+        <ActivityIndicator size="small" color={palette.ink} />
+        <Text
+          style={{
+            flex: 1,
+            fontFamily: handFont,
+            fontSize: 14,
+            color: palette.ink,
+            fontWeight: '700',
+          }}
+        >
           {current.label}
         </Text>
-        <Text style={tw`text-[10px] text-gray-500`}>{elapsed}s</Text>
+        <Text
+          style={{
+            fontFamily: noteFont,
+            fontSize: 11,
+            color: palette.inkMute,
+          }}
+        >
+          {elapsed}s
+        </Text>
       </View>
 
-      {/* 阶段列表 — 已完成 ✓,当前 →,未到 · */}
-      <View style={tw`gap-1 mt-1`}>
+      <View style={{ gap: 4, marginTop: 4 }}>
         {stages.map((s, i) => {
           const done = i < currentIdx;
           const active = i === currentIdx;
-          const upcoming = i > currentIdx;
           return (
-            <View key={i} style={tw`flex-row items-center gap-2`}>
+            <View
+              key={i}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
               <Text
-                style={tw.style(
-                  'text-[10px] w-3',
-                  done ? 'text-emerald-600' : active ? 'text-[#A68B6A]' : 'text-gray-300',
-                )}
+                style={{
+                  width: 12,
+                  fontFamily: noteFont,
+                  fontSize: 11,
+                  color: done
+                    ? '#0A6E2A'
+                    : active
+                      ? palette.ink
+                      : palette.inkPale,
+                }}
               >
                 {done ? '✓' : active ? '→' : '·'}
               </Text>
               <Text
-                style={tw.style(
-                  'text-[11px] flex-1',
-                  done
-                    ? 'text-gray-500 line-through'
+                style={{
+                  flex: 1,
+                  fontFamily: noteFont,
+                  fontSize: 12,
+                  color: done
+                    ? palette.inkMute
                     : active
-                      ? 'text-gray-900 font-medium'
-                      : 'text-gray-400',
-                )}
+                      ? palette.ink
+                      : palette.inkMute,
+                  fontWeight: active ? '700' : '400',
+                  textDecorationLine: done ? 'line-through' : 'none',
+                }}
               >
                 {s.label}
               </Text>
@@ -505,6 +641,6 @@ function ProgressStages({ mode, url }: { mode: Mode; url: string }) {
           );
         })}
       </View>
-    </View>
+    </SketchBox>
   );
 }

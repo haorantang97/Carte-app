@@ -42,12 +42,13 @@ export function useDishComments(dishId: string | undefined) {
     },
   });
 
-  // Realtime: refetch on any change for this dish (cheap; comments per dish are small)
+  // Realtime: refetch on any change for this dish (cheap; comments per dish are small).
+  // Gate on user — anon-signin is fast, avoids double-subscribe churn.
   useEffect(() => {
-    if (!dishId) return;
+    if (!dishId || !user?.id) return;
     const nonce = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`dish_comments:${dishId}:${user?.id ?? 'anon'}:${nonce}`)
+      .channel(`dish_comments:${dishId}:${user.id}:${nonce}`)
       .on(
         'postgres_changes',
         {

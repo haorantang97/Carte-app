@@ -118,10 +118,10 @@ export function useDishDetail(dishId: string | undefined) {
   // first mount's removeChannel races with the second mount's subscribe;
   // re-using the same channel name makes the second .on() error out.
   useEffect(() => {
-    if (!dishId) return;
+    if (!dishId || !user?.id) return;
     const nonce = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`dish_likes:detail:${dishId}:${user?.id ?? 'anon'}:${nonce}`)
+      .channel(`dish_likes:detail:${dishId}:${user.id}:${nonce}`)
       .on(
         'postgres_changes',
         {

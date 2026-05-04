@@ -16,10 +16,12 @@ export function useRealtimeDishes(groupId: string | undefined) {
   const { user } = useSession();
 
   useEffect(() => {
-    if (!groupId) return;
+    // Wait for auth — anon-signin is fast (~1s) and gating here avoids
+    // the anon→uid double-subscribe churn (channel reset on first auth).
+    if (!groupId || !user?.id) return;
     const nonce = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`dishes:${groupId}:${user?.id ?? 'anon'}:${nonce}`)
+      .channel(`dishes:${groupId}:${user.id}:${nonce}`)
       .on(
         'postgres_changes',
         {

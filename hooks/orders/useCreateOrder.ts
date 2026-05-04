@@ -27,13 +27,34 @@ export function useCreateOrder() {
       const items = cart.getItems(input.groupId);
       if (items.length === 0) throw new Error('Cart is empty');
 
+      // Preflight: chef may have deleted a dish since user added it. Catch
+      // it before we insert the session — otherwise a partial order leaves
+      // an orphan session row even with the rollback below.
+      const dishIds = items.map((it) => it.dishId);
+      const { data: aliveDishes, error: dishCheckErr } = await supabase
+        .from('dishes')
+        .select('id')
+        .in('id', dishIds);
+      if (dishCheckErr) throw dishCheckErr;
+      const aliveSet = new Set((aliveDishes ?? []).map((d) => d.id));
+      const missing = dishIds.filter((id) => !aliveSet.has(id));
+      if (missing.length > 0) {
+        for (const id of missing) cart.remove(input.groupId, id);
+        throw new Error(
+          `${missing.length} 个菜品已被下架,已从购物车移除,请重新下单`,
+        );
+      }
+
+      // Trim whitespace-only notes to null so we don't store junk.
+      const cleanNotes = input.notes?.trim() || null;
+
       const { data: session, error: sessionErr } = await supabase
         .from('order_sessions')
         .insert({
           diner_id: user.id,
           menu_group_id: input.groupId,
           tip: input.tip,
-          notes: input.notes ?? null,
+          notes: cleanNotes,
         })
         .select()
         .single();
@@ -50,7 +71,8 @@ export function useCreateOrder() {
       }));
       const { error: ordersErr } = await supabase.from('orders').insert(orderRows);
       if (ordersErr) {
-        // Roll back the session if individual orders failed
+        // Best-effort rollback. If THIS delete also fails (network blip),
+        // we get an orphan empty session — caller already saw error toast.
         await supabase.from('order_sessions').delete().eq('id', session.id);
         throw ordersErr;
       }

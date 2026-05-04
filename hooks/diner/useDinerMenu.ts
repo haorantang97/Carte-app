@@ -70,6 +70,10 @@ export function useDinerMenu(groupId: string | undefined) {
       ]);
       if (groupRes.error) throw groupRes.error;
       const g = groupRes.data as any;
+      // FK is enforced + !inner above; if `profiles` is still missing the
+      // row was deleted between the query plan and result — surface it
+      // instead of silently rendering "Diner".
+      if (!g?.profiles) throw new Error('Chef profile missing for group ' + groupId);
       return {
         group: {
           id: g.id,
@@ -85,7 +89,7 @@ export function useDinerMenu(groupId: string | undefined) {
         categories: categoriesRes.data ?? [],
         dishes: (dishesRes.data ?? []).map((d: any) => ({
           ...d,
-          price: Number(d.price),
+          price: Number(d.price ?? 0),
           ingredients: Array.isArray(d.ingredients) ? d.ingredients : [],
         })),
       };

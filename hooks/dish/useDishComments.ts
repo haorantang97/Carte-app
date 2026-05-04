@@ -29,14 +29,16 @@ export function useDishComments(dishId: string | undefined) {
         .eq('dish_id', dishId!)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data ?? []).map((c: any) => ({
-        id: c.id,
-        content: c.content,
-        created_at: c.created_at,
-        user_id: c.user_id,
-        username: c.profiles.username,
-        avatar_url: c.profiles.avatar_url,
-      }));
+      return (data ?? [])
+        .filter((c: any) => c.profiles)
+        .map((c: any) => ({
+          id: c.id,
+          content: c.content,
+          created_at: c.created_at,
+          user_id: c.user_id,
+          username: c.profiles.username,
+          avatar_url: c.profiles.avatar_url,
+        }));
     },
   });
 

@@ -66,24 +66,36 @@ export function useChefOrders() {
           dinerMap.set(p.id, { username: p.username, avatar_url: p.avatar_url });
         }
       }
-      return rows.map((r: any): ChefOrderRow => ({
-        id: r.id,
-        status: r.status as OrderStatus,
-        quantity: r.quantity,
-        price_at_order: Number(r.price_at_order),
-        created_at: r.created_at,
-        menu_group_id: r.menu_group_id,
-        session_id: r.session_id,
-        dish_id: r.dish_id,
-        diner_id: r.diner_id,
-        dish_name: r.dishes.name,
-        dish_image_url: r.dishes.image_url,
-        dish_ingredients: Array.isArray(r.dishes.ingredients) ? r.dishes.ingredients : [],
-        group_name: r.menu_groups.name,
-        tip: Number(r.order_sessions.tip ?? 0),
-        diner_username: dinerMap.get(r.diner_id)?.username ?? 'Diner',
-        diner_avatar_url: dinerMap.get(r.diner_id)?.avatar_url ?? null,
-      }));
+      // !inner joins above mean dishes / order_sessions / menu_groups should
+      // never be null. If they ever are (FK race during cascade delete),
+      // skip the row instead of crashing the whole list.
+      return rows
+        .filter((r: any) => r.dishes && r.menu_groups && r.order_sessions)
+        .map((r: any): ChefOrderRow => {
+          const diner = dinerMap.get(r.diner_id);
+          return {
+            id: r.id,
+            status: r.status as OrderStatus,
+            quantity: r.quantity,
+            price_at_order: Number(r.price_at_order),
+            created_at: r.created_at,
+            menu_group_id: r.menu_group_id,
+            session_id: r.session_id,
+            dish_id: r.dish_id,
+            diner_id: r.diner_id,
+            dish_name: r.dishes.name,
+            dish_image_url: r.dishes.image_url,
+            dish_ingredients: Array.isArray(r.dishes.ingredients)
+              ? r.dishes.ingredients
+              : [],
+            group_name: r.menu_groups.name,
+            tip: Number(r.order_sessions.tip ?? 0),
+            // Profile may be missing if diner deleted their account; show
+            // "已注销" so chef knows it's not just a generic placeholder.
+            diner_username: diner?.username ?? '已注销 diner',
+            diner_avatar_url: diner?.avatar_url ?? null,
+          };
+        });
     },
   });
 }

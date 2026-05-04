@@ -58,6 +58,12 @@ export function useDishDetail(dishId: string | undefined) {
         .single();
       if (dishRes.error) throw dishRes.error;
       const d = dishRes.data as any;
+      // !inner joins guarantee menu_groups + chef profile exist; if either
+      // is missing we'd dereference null below. Surface the inconsistency.
+      if (!d?.menu_groups) throw new Error('Menu group missing for dish ' + dishId);
+      if (!d.menu_groups.profiles) {
+        throw new Error('Chef profile missing for dish ' + dishId);
+      }
 
       const [{ data: allLikes }, { data: myLikes }] = await Promise.all([
         supabase.from('dish_likes').select('user_id').eq('dish_id', dishId!),
@@ -78,7 +84,7 @@ export function useDishDetail(dishId: string | undefined) {
         id: d.id,
         name: d.name,
         description: d.description,
-        price: Number(d.price),
+        price: Number(d.price ?? 0),
         image_url: d.image_url,
         ingredients: Array.isArray(d.ingredients) ? d.ingredients : [],
         recipe,

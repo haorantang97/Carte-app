@@ -69,8 +69,11 @@ export default function DinerGroupDetails() {
   const [cartOpen, setCartOpen] = useState(false);
   const [tab, setTab] = useState<'menu' | 'wishlist'>('menu');
 
-  const categories = data?.categories ?? [];
-  const categoryNames = categories.map((c) => c.name);
+  // Stable empty-array refs (see chef/group/[id].tsx for the same pattern).
+  // Without this, sidebar style + activeCat effect runs every render → list
+  // flicker on long category sidebars.
+  const categories = useMemo(() => data?.categories ?? [], [data?.categories]);
+  const categoryNames = useMemo(() => categories.map((c) => c.name), [categories]);
   const sb = sidebarStyle(categoryNames);
 
   useEffect(() => {

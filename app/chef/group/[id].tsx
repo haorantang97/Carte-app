@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -58,7 +58,11 @@ export default function ChefGroupDetails() {
   const delDish = useDeleteDish(groupId);
   const retry = useRetryExtractDish();
   useRealtimeDishes(groupId);
-  useMemo(() => {
+  // Side-effect on group entry: clean up any extraction rows the edge
+  // function abandoned (network drop / cold-start crash). Was wrongly
+  // written as useMemo (ignored result, lint warned about groupId being
+  // unused in the body).
+  useEffect(() => {
     void supabase.rpc('sweep_stuck_extractions');
   }, [groupId]);
 
@@ -82,8 +86,13 @@ export default function ChefGroupDetails() {
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
   const [deletingDish, setDeletingDish] = useState<Dish | null>(null);
 
-  const categories = data?.categories ?? [];
-  const dishes = data?.dishes ?? [];
+  // Wrap the `?? []` fallback in useMemo so the empty-array reference is
+  // STABLE across renders. Without this, every parent render allocates a
+  // new `[]` and downstream useMemo's see a "changed" dep → cache miss
+  // forever (filter/find on N items runs every frame, not just on data
+  // change). On a 50+ dish carte this caused noticeable scroll jank.
+  const categories = useMemo(() => data?.categories ?? [], [data?.categories]);
+  const dishes = useMemo(() => data?.dishes ?? [], [data?.dishes]);
 
   const activeCatId = selectedCatId ?? categories[0]?.id ?? null;
   const activeCat = useMemo(

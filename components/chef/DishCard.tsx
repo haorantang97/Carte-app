@@ -32,7 +32,24 @@ const STAGE_PROGRESS: Record<string, [number, number, number]> = {
   integrating: [60, 95, 60],
 };
 
-function ExtractingCard({ dish, index, onDelete }: { dish: Dish; index: number; onDelete: () => void }) {
+/** TTL: edge function should never legit take more than ~3 min. After this
+ *  the row is almost certainly zombied (cold-start crash, network drop).
+ *  Server-side `sweep_stuck_extractions` runs only on chef-carte mount, so a
+ *  carte left open since yesterday could still show a forever-spinning card.
+ *  We detect on the client + offer manual retry/delete. */
+const STUCK_AFTER_MS = 3 * 60 * 1000;
+
+function ExtractingCard({
+  dish,
+  index,
+  onDelete,
+  onRetry,
+}: {
+  dish: Dish;
+  index: number;
+  onDelete: () => void;
+  onRetry?: () => void;
+}) {
   const stage = dish.extract_stage ?? 'fetching';
   const stageStartedAt = useRef<number>(Date.now());
   const lastStage = useRef<string>(stage);
@@ -51,6 +68,77 @@ function ExtractingCard({ dish, index, onDelete }: { dish: Dish; index: number; 
   const stageElapsed = (Date.now() - stageStartedAt.current) / 1000;
   const progress = Math.min(target, start + (stageElapsed / duration) * (target - start));
   const progressInt = Math.floor(progress);
+
+  // Detect zombie: extract_started_at older than STUCK_AFTER_MS. Render a
+  // distinct UI so user knows it's not actively processing.
+  const startedAt = dish.extract_started_at
+    ? new Date(dish.extract_started_at).getTime()
+    : null;
+  const isStuck = startedAt != null && Date.now() - startedAt > STUCK_AFTER_MS;
+
+  if (isStuck) {
+    return (
+      <SketchBox
+        radius={16}
+        seed={index + 5}
+        fillColor={palette.paper}
+        style={{ padding: 10 }}
+      >
+        <View style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+          <AlertCircle size={20} color={palette.ink} strokeWidth={1.6} />
+          <Text
+            style={{
+              fontFamily: handFont,
+              fontSize: 18,
+              color: palette.ink,
+              lineHeight: 20,
+            }}
+          >
+            提取好像卡住了
+          </Text>
+          <Text
+            style={{
+              fontFamily: noteFont,
+              fontSize: 12,
+              color: palette.inkSoft,
+              lineHeight: 16,
+            }}
+          >
+            已超过 {Math.floor((Date.now() - startedAt) / 60000)} 分钟没动静,
+            通常这意味着抓取服务断了。重试或删除这张占位卡。
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+            {onRetry ? (
+              <Tappable
+                feedback="press"
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+                    () => {},
+                  );
+                  onRetry();
+                }}
+              >
+                <SketchPill active seed={11} style={{ paddingTop: 3, paddingBottom: 3 }}>
+                  <RefreshCw size={11} color={palette.ink} strokeWidth={1.5} />
+                  <Text style={{ fontFamily: handFont, fontSize: 12, color: palette.ink }}>
+                    重试
+                  </Text>
+                </SketchPill>
+              </Tappable>
+            ) : null}
+            <Tappable feedback="press" onPress={onDelete}>
+              <SketchPill seed={12} style={{ paddingTop: 3, paddingBottom: 3 }}>
+                <Trash2 size={11} color={palette.ink} strokeWidth={1.5} />
+                <Text style={{ fontFamily: handFont, fontSize: 12, color: palette.ink }}>
+                  删除
+                </Text>
+              </SketchPill>
+            </Tappable>
+          </View>
+        </View>
+      </SketchBox>
+    );
+  }
 
   return (
     <SketchBox radius={16} seed={index + 5} fillColor={palette.paper} style={{ padding: 10 }}>
@@ -203,7 +291,9 @@ export function DishCard({ dish, index, onEdit, onDelete, onRetry }: Props) {
   const imgH = r.scale(110, { min: 96, max: 150 });
 
   if (dish.extract_status === 'extracting') {
-    return <ExtractingCard dish={dish} index={index} onDelete={onDelete} />;
+    return (
+      <ExtractingCard dish={dish} index={index} onDelete={onDelete} onRetry={onRetry} />
+    );
   }
   if (dish.extract_status === 'error') {
     return <ErrorCard dish={dish} index={index} onDelete={onDelete} onRetry={onRetry} />;

@@ -60,17 +60,46 @@ export function usePickAndUploadImage(bucket: ImageBucket, options?: PickOptions
         { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
       );
 
-      // 4) Upload (RN-friendly: file URI → ArrayBuffer → Supabase Storage)
-      const ab = await fetch(manipulated.uri).then((r) => r.arrayBuffer());
+      // 4) Upload (RN-friendly: file URI → ArrayBuffer → Supabase Storage).
+      // Wrap in retry loop: phone backgrounding mid-upload (chef pasted URL
+      // then went to check msg) silently kills the socket. 3 attempts with
+      // 1s / 2s backoff covers the typical "back to foreground in 5s" path.
       const filename = `${Date.now()}.jpg`;
       const path = `${user.id}/${filename}`;
-      const { error } = await supabase.storage
-        .from(bucket)
-        .upload(path, ab, { contentType: 'image/jpeg', upsert: false });
-      if (error) throw error;
-
-      const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-      return data.publicUrl;
+      const ab = await fetch(manipulated.uri).then((r) => r.arrayBuffer());
+      let lastErr: unknown = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) {
+          await new Promise((r) => setTimeout(r, attempt * 1000));
+        }
+        const { error } = await supabase.storage
+          .from(bucket)
+          .upload(path, ab, { contentType: 'image/jpeg', upsert: false });
+        if (!error) {
+          const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+          return data.publicUrl;
+        }
+        lastErr = error;
+        // Non-retriable errors: bail immediately. Permission / quota / dup
+        // errors won't fix themselves with another attempt.
+        const msg = (error as { message?: string }).message ?? '';
+        if (
+          msg.includes('Permission') ||
+          msg.includes('exceeded') ||
+          msg.includes('Duplicate') ||
+          msg.includes('already exists')
+        ) {
+          break;
+        }
+      }
+      // All retries exhausted (or hit non-retriable). Surface a friendlier
+      // error than "TypeError: Network request failed".
+      const finalMsg = (lastErr as { message?: string })?.message ?? '上传失败';
+      throw new Error(
+        finalMsg.includes('Network')
+          ? '网络异常,请检查 Wi-Fi 后重试'
+          : finalMsg,
+      );
     },
   });
 }

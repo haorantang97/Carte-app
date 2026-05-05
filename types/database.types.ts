@@ -379,6 +379,15 @@ export type Database = {
           is_private: boolean
         }[]
       }
+      create_order_with_items: {
+        Args: {
+          p_group_id: string
+          p_tip: number
+          p_notes: string | null
+          p_items: Json
+        }
+        Returns: string
+      }
       get_apify_api_key: { Args: never; Returns: string }
       get_gemini_api_key: { Args: never; Returns: string }
       get_openclaw_api_key: { Args: never; Returns: string }

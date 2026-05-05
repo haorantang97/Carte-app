@@ -2,14 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import {
-  ChefHat,
-  ChevronRight,
-  Lock,
-  Plus,
-  ThumbsUp,
-  User,
-} from 'lucide-react-native';
+import { ChevronRight, Plus, ThumbsUp } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -39,7 +32,7 @@ import { useChefRecentComments } from '@/hooks/dish/useChefRecentComments';
 import { showToast } from '@/components/ui/Toast';
 import type { MenuGroup } from '@/types/domain';
 
-import { palette, handFont, noteFont, titleFont, uiFont } from '@/lib/palette';
+import { palette, handFont, noteFont, titleFont } from '@/lib/palette';
 import { useResponsive } from '@/lib/responsive';
 
 function formatToday(): string {
